@@ -47,6 +47,17 @@ interface DimensionScoreWithRecommendations extends DimensionScore {
   recommendations: string[];
 }
 
+interface Question {
+  id: string;
+  text: string;
+  options: { text: string; points: number }[];
+  multiSelect: boolean;
+  dimensionIndex: number;
+  dimensionName: string;
+  dimensionColor: string;
+  weight: number;
+}
+
 /* --------------------------------------------------------------------------
  * Utility: Debounce
  * -------------------------------------------------------------------------- */
@@ -506,15 +517,20 @@ const dimensions = [
   },
 ];
 
-const allQuestions = dimensions.flatMap((dim, dimIndex) =>
+const allQuestions: Question[] = dimensions.flatMap((dim, dimIndex) =>
   dim.questions.map((q) => ({
-    ...q,
+    id: q.id,
+    text: q.text,
+    options: q.options,
+    // ensure every question has multiSelect (default false)
+    multiSelect: (q as { multiSelect?: boolean }).multiSelect ?? false,
     dimensionIndex: dimIndex,
     dimensionName: dim.name,
     dimensionColor: dim.color,
     weight: dim.weight,
   }))
 );
+
 
 /* --------------------------------------------------------------------------
  * Error Boundary
