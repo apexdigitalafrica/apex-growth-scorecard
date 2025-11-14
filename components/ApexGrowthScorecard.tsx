@@ -16,22 +16,17 @@ import {
 /* --------------------------------------------------------------------------
  * Utility: Debounce
  * -------------------------------------------------------------------------- */
-const debounce = (
-  func: (...args: unknown[]) => void,
+const debounce = <T extends unknown[]>(
+  func: (...args: T) => void,
   wait: number
 ) => {
   let timeout: ReturnType<typeof setTimeout> | undefined;
-
-  return (...args: unknown[]) => {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-
-    timeout = setTimeout(() => {
-      func(...args);
-    }, wait);
+  return (...args: T) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
   };
 };
+
 
 /* --------------------------------------------------------------------------
  * Static Config
@@ -490,40 +485,48 @@ const allQuestions = dimensions.flatMap((dim, dimIndex) =>
 /* --------------------------------------------------------------------------
  * Error Boundary
  * -------------------------------------------------------------------------- */
-class ScorecardErrorBoundary extends React.Component {
-  constructor(props) {
+/* -------------------------------------------------------------------------- */
+/* Error Boundary                                                             */
+/* -------------------------------------------------------------------------- */
+
+import React, { ErrorInfo } from "react";
+
+type ScorecardErrorBoundaryProps = {
+  children: React.ReactNode;
+};
+
+type ScorecardErrorBoundaryState = {
+  hasError: boolean;
+};
+
+class ScorecardErrorBoundary extends React.Component<
+  ScorecardErrorBoundaryProps,
+  ScorecardErrorBoundaryState
+> {
+  constructor(props: ScorecardErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError() {
+  static getDerivedStateFromError(_error: Error): ScorecardErrorBoundaryState {
     return { hasError: true };
   }
 
-  componentDidCatch(error, errorInfo) {
-    console.error('Scorecard Error:', error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Scorecard error boundary caught:", error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <div className="text-center max-w-md">
-            <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Something went wrong
-            </h2>
-            <p className="text-gray-600 mb-4">
-              We encountered an issue loading the scorecard. Please try
-              refreshing the page.
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-            >
-              Restart Scorecard
-            </button>
-          </div>
+        <div className="max-w-3xl mx-auto mt-10 text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">
+            Something went wrong.
+          </h2>
+          <p className="text-slate-600">
+            Please refresh the page and try again, or contact us if the problem
+            persists.
+          </p>
         </div>
       );
     }
@@ -531,6 +534,7 @@ class ScorecardErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
 
 /* --------------------------------------------------------------------------
  * Main Component
