@@ -1,7 +1,7 @@
 // ApexGrowthScorecard.jsx
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ArrowRight,
   ArrowLeft,

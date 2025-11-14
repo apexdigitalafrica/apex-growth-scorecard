@@ -27,6 +27,7 @@ export async function POST(request: Request) {
       email,
       company,
       score,
+	  answers,
       timestamp,
     });
 
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Scorecard API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
