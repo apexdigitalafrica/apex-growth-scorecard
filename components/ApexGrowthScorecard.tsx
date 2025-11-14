@@ -560,17 +560,23 @@ const ApexGrowthScorecard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   /* ------------------------ Tracking Helper ------------------------ */
-  const trackEvent = useCallback((event, data = {}) => {
-    if (typeof window !== 'undefined') {
-      if (window.gtag) {
-        window.gtag('event', event, data);
+  const trackEvent = useCallback(
+  (event: string, data: Record<string, unknown> = {}) => {
+    if (typeof window !== "undefined") {
+      if ((window as any).gtag) {
+        (window as any).gtag("event", event, data);
       }
-      if (window.fbq) {
-        window.fbq('track', event, data);
+
+      if ((window as any).fbq) {
+        (window as any).fbq("track", event, data);
       }
+
+      console.log(`Track: ${event}`, data);
     }
-    console.log(`Track: ${event}`, data);
-  }, []);
+  },
+  []
+);
+
 
   /* ------------------------ Input Sanitization ------------------------ */
   const sanitizeInput = useCallback((input) => {
