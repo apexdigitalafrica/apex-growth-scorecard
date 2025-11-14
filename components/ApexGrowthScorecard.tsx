@@ -15,6 +15,16 @@ import {
   Loader,
 } from 'lucide-react';
 
+declare global {
+  interface Window {
+    gtag: (
+      command: 'event' | 'config' | 'set',
+      targetId: string,
+      config?: Record<string, unknown>
+    ) => void;
+  }
+}
+
 /* --------------------------------------------------------------------------
  * Utility: Debounce
  * -------------------------------------------------------------------------- */
@@ -560,22 +570,14 @@ const ApexGrowthScorecard = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   /* ------------------------ Tracking Helper ------------------------ */
-  const trackEvent = useCallback(
-  (event: string, data: Record<string, unknown> = {}) => {
-    if (typeof window !== "undefined") {
-      if ((window as any).gtag) {
-        (window as any).gtag("event", event, data);
-      }
-
-      if ((window as any).fbq) {
-        (window as any).fbq("track", event, data);
-      }
-
-      console.log(`Track: ${event}`, data);
+ const trackEvent = useCallback((event: string, data: Record<string, unknown> = {}) => {
+  if (typeof window !== 'undefined') {
+    if (window.gtag) {
+      window.gtag('event', event, data);
     }
-  },
-  []
-);
+  }
+}, []);
+
 
 
   /* ------------------------ Input Sanitization ------------------------ */
