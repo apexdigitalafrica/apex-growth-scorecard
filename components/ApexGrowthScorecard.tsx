@@ -658,15 +658,16 @@ const [answers, setAnswers] = useState<Record<string, number | number[]>>({});
     return { dimensionScores, totalScore };
   }, [answers]);
 
-  const getScoreStage = (score) => {
-    if (score >= 80)
-      return { stage: 'Leading', color: 'text-green-600', icon: '🏆' };
-    if (score >= 60)
-      return { stage: 'Scaling', color: 'text-blue-600', icon: '📈' };
-    if (score >= 40)
-      return { stage: 'Building', color: 'text-yellow-600', icon: '🔨' };
-    return { stage: 'Foundation', color: 'text-red-600', icon: '🚧' };
-  };
+  const getScoreStage = (score: number) => {
+  if (score >= 80)
+    return { stage: 'Leading', color: 'text-green-600', icon: '🏆' };
+  if (score >= 60)
+    return { stage: 'Growing', color: 'text-blue-600', icon: '📈' };
+  if (score >= 40)
+    return { stage: 'Developing', color: 'text-yellow-600', icon: '🌱' };
+  return { stage: 'Starting', color: 'text-orange-600', icon: '🚀' };
+};
+
 
   const getRecommendations = useCallback((dimensionScores) => {
     return dimensionScores.map((dim) => {
