@@ -669,36 +669,45 @@ const [answers, setAnswers] = useState<Record<string, number | number[]>>({});
 };
 
 
-  const getRecommendations = useCallback((dimensionScores: Array<{dimension: string, score: number, questions: Array<any>}>) => {
-    return dimensionScores.map((dim) => {
-      let recommendations = [];
+ interface DimensionScore {
+  dimension: string;
+  name: string;
+  score: number;
+  percentage: number;
+  questions: unknown[];
+}
 
-      if (dim.percentage < 40) {
-        recommendations = [
-          `Conduct a comprehensive audit of your ${dim.name.toLowerCase()}`,
-          'Allocate immediate resources to address critical gaps',
-          'Set up tracking to measure improvements',
-          'Consider professional consultation for rapid improvement',
-        ];
-      } else if (dim.percentage < 70) {
-        recommendations = [
-          `Optimize existing ${dim.name.toLowerCase()} processes`,
-          'Test new strategies to improve performance',
-          'Benchmark against industry leaders',
-          'Implement A/B testing for continuous improvement',
-        ];
-      } else {
-        recommendations = [
-          `Scale successful ${dim.name.toLowerCase()} strategies`,
-          'Explore advanced optimization techniques',
-          'Consider automation to maintain excellence',
-          'Share best practices across your organization',
-        ];
-      }
+const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
+  return dimensionScores.map((dim) => {
+    let recommendations = [];
 
-      return { ...dim, recommendations };
-    });
-  }, []);
+    if (dim.percentage < 40) {
+      recommendations = [
+        `Conduct a comprehensive audit of your ${dim.name.toLowerCase()}`,
+        'Allocate immediate resources to address critical gaps',
+        'Set up tracking to measure improvements',
+        'Consider professional consultation for rapid improvement',
+      ];
+    } else if (dim.percentage < 70) {
+      recommendations = [
+        `Optimize existing ${dim.name.toLowerCase()} processes`,
+        'Test new strategies to improve performance',
+        'Benchmark against industry leaders',
+        'Implement A/B testing for continuous improvement',
+      ];
+    } else {
+      recommendations = [
+        `Scale successful ${dim.name.toLowerCase()} strategies`,
+        'Explore advanced optimization techniques',
+        'Consider automation to maintain excellence',
+        'Share best practices across your organization',
+      ];
+    }
+
+    return { ...dim, recommendations };
+  });
+}, []);
+
 
   /* ------------------------ Answer Handler (Debounced, Safe) ------------------------ */
   const handleAnswer = useCallback(
