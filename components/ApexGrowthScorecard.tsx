@@ -16,15 +16,20 @@ import {
 /* --------------------------------------------------------------------------
  * Utility: Debounce
  * -------------------------------------------------------------------------- */
-const debounce = (func, wait) => {
-  let timeout;
-  return (...args) => {
-    const later = () => {
+const debounce = (
+  func: (...args: unknown[]) => void,
+  wait: number
+) => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  return (...args: unknown[]) => {
+    if (timeout) {
       clearTimeout(timeout);
+    }
+
+    timeout = setTimeout(() => {
       func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
+    }, wait);
   };
 };
 
