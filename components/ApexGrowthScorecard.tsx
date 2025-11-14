@@ -823,14 +823,18 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
       } else {
         throw new Error('Submission failed');
       }
-    } catch (err) {
-      console.error('Submission error:', err);
-      setError('Failed to submit. Please check your connection and try again.');
-      trackEvent('form_submission_error', { error: err.message });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    } catch (err: unknown) {
+  console.error('Submission error:', err);
+
+  const errorMessage =
+    err instanceof Error ? err.message : 'Unknown error occurred';
+
+  setError('Failed to submit. Please check your connection and try again.');
+  trackEvent('form_submission_error', { error: errorMessage });
+} finally {
+  setIsSubmitting(false);
+}
+
 
   /* ------------------------ Derived UI State ------------------------ */
   const currentQuestion = allQuestions[currentStep];
