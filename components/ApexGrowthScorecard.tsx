@@ -669,7 +669,7 @@ const [answers, setAnswers] = useState<Record<string, number | number[]>>({});
 };
 
 
-  const getRecommendations = useCallback((dimensionScores) => {
+  const getRecommendations = useCallback((dimensionScores: Array<{dimension: string, score: number, questions: Array<any>}>) => {
     return dimensionScores.map((dim) => {
       let recommendations = [];
 
