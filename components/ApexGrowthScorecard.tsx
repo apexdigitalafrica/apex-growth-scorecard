@@ -581,9 +581,10 @@ const ApexGrowthScorecard = () => {
 
 
   /* ------------------------ Input Sanitization ------------------------ */
-  const sanitizeInput = useCallback((input) => {
-    return input.replace(/[<>]/g, '').trim();
-  }, []);
+ const sanitizeInput = useCallback((input: string | null | undefined): string => {
+  if (!input) return '';
+  return input.replace(/[<>]/g, '').trim();
+}, []);
 
   /* ------------------------ Load Saved Progress ------------------------ */
   useEffect(() => {
