@@ -561,7 +561,11 @@ class ScorecardErrorBoundary extends React.Component<
  * -------------------------------------------------------------------------- */
 const ApexGrowthScorecard = () => {
   const [currentStep, setCurrentStep] = useState(0);
-const [answers, setAnswers] = useState<Record<string, number | number[]>>({});
+type AnswerValue = number | number[];
+type AnswerMap = Record<string, AnswerValue>;
+
+const [answers, setAnswers] = useState<AnswerMap>({});
+
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
   const [showResults, setShowResults] = useState(false);
@@ -711,37 +715,40 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
 
   /* ------------------------ Answer Handler (Debounced, Safe) ------------------------ */
   const handleAnswer = useCallback(
-    debounce((questionId, points, multiSelect = false) => {
-      setAnswers((prev) => {
+  debounce(
+    (questionId: string, points: number, multiSelect: boolean = false) => {
+      setAnswers((prev: AnswerMap) => {
         if (multiSelect) {
-          const current = prev[questionId] || [];
+          const current = (prev[questionId] as number[] | undefined) || [];
           const exists = current.includes(points);
           const updated = exists
             ? current.filter((p) => p !== points)
             : [...current, points];
 
-          trackEvent('question_answered', {
-            questionId,
-            action: exists ? 'deselected' : 'selected',
-            points,
-            multiSelect: true,
-          });
-
-          return { ...prev, [questionId]: updated };
-        } else {
-          trackEvent('question_answered', {
-            questionId,
-            action: 'selected',
-            points,
-            multiSelect: false,
-          });
-
-          return { ...prev, [questionId]: points };
+          return {
+            ...prev,
+            [questionId]: updated,
+          };
         }
+
+        return {
+          ...prev,
+          [questionId]: points,
+        };
       });
-    }, 300),
-    [trackEvent]
-  );
+
+      trackEvent("question_answered", {
+        questionId,
+        action: multiSelect ? "multi" : "single",
+        points,
+        multiSelect,
+      });
+    },
+    300
+  ),
+  [trackEvent]
+);
+
 
   /* ------------------------ Navigation ------------------------ */
   const handleNext = () => {
