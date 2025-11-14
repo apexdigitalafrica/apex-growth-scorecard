@@ -769,16 +769,18 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
   };
 
   /* ------------------------ Inputs ------------------------ */
-  const handleEmailChange = (e) => {
-    const sanitized = sanitizeInput(e.target.value);
-    setEmail(sanitized);
-    setError('');
-  };
+ const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const sanitized = sanitizeInput(e.target.value);
+  setEmail(sanitized);
+  setError('');
+};
 
-  const handleCompanyChange = (e) => {
-    const sanitized = sanitizeInput(e.target.value);
-    setCompany(sanitized);
-  };
+
+ const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const sanitized = sanitizeInput(e.target.value);
+  setCompany(sanitized);
+};
+
 
   /* ------------------------ Submit ------------------------ */
   const handleSubmit = async () => {
