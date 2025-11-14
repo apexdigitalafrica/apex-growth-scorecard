@@ -561,7 +561,7 @@ class ScorecardErrorBoundary extends React.Component<
  * -------------------------------------------------------------------------- */
 const ApexGrowthScorecard = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState({});
+const [answers, setAnswers] = useState<Record<string, number | number[]>>({});
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
   const [showResults, setShowResults] = useState(false);
