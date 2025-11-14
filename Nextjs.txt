@@ -1,0 +1,12 @@
+# clone the empty repo
+git clone https://github.com/apexdigitalafrica/apex-growth-scorecard.git
+cd apex-growth-scorecard
+
+# create Next.js app in this folder
+npx create-next-app@latest . 
+
+# if you want Tailwind (strongly recommended)
+npx tailwindcss init -p
+
+# install icons
+npm install lucide-react
