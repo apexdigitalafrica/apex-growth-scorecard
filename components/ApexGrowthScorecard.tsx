@@ -1,9 +1,13 @@
-// ApexGrowthScorecard.jsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from "react";
-import type { ErrorInfo } from "react";
-
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+  type ChangeEvent,
+} from 'react';
+import type { ErrorInfo } from 'react';
 import {
   ArrowRight,
   ArrowLeft,
@@ -17,12 +21,30 @@ import {
 
 declare global {
   interface Window {
-    gtag: (
+    gtag?: (
       command: 'event' | 'config' | 'set',
       targetId: string,
       config?: Record<string, unknown>
     ) => void;
   }
+}
+
+/* --------------------------------------------------------------------------
+ * Types
+ * -------------------------------------------------------------------------- */
+type AnswerValue = number | number[];
+type AnswerMap = Record<string, AnswerValue>;
+
+interface DimensionScore {
+  name: string;
+  percentage: number;
+  weight: number;
+  color: string;
+  weightedScore: number;
+}
+
+interface DimensionScoreWithRecommendations extends DimensionScore {
+  recommendations: string[];
 }
 
 /* --------------------------------------------------------------------------
@@ -33,12 +55,12 @@ const debounce = <T extends unknown[]>(
   wait: number
 ) => {
   let timeout: ReturnType<typeof setTimeout> | undefined;
+
   return (...args: T) => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
 };
-
 
 /* --------------------------------------------------------------------------
  * Static Config
@@ -494,12 +516,12 @@ const allQuestions = dimensions.flatMap((dim, dimIndex) =>
   }))
 );
 
-/* -------------------------------------------------------------------------- */
-/* Error Boundary                                                             */
-/* -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+ * Error Boundary
+ * -------------------------------------------------------------------------- */
 
 interface ScorecardErrorBoundaryProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 interface ScorecardErrorBoundaryState {
@@ -517,13 +539,11 @@ class ScorecardErrorBoundary extends React.Component<
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   static getDerivedStateFromError(_error: Error): ScorecardErrorBoundaryState {
-    // We don’t need the error value here, just flip the flag
     return { hasError: true };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Here we actually use the error + info, so ESLint is happy
-    console.error("Scorecard Error:", error, errorInfo);
+    console.error('Scorecard Error:', error, errorInfo);
   }
 
   render() {
@@ -554,18 +574,25 @@ class ScorecardErrorBoundary extends React.Component<
   }
 }
 
-
+/* --------------------------------------------------------------------------
+ * Score Stage Helper
+ * -------------------------------------------------------------------------- */
+const getScoreStage = (score: number) => {
+  if (score >= 80)
+    return { stage: 'Leading', color: 'text-green-600', icon: '🏆' };
+  if (score >= 60)
+    return { stage: 'Scaling', color: 'text-blue-600', icon: '📈' };
+  if (score >= 40)
+    return { stage: 'Building', color: 'text-yellow-600', icon: '🌱' };
+  return { stage: 'Foundation', color: 'text-orange-600', icon: '🚀' };
+};
 
 /* --------------------------------------------------------------------------
  * Main Component
  * -------------------------------------------------------------------------- */
-const ApexGrowthScorecard = () => {
+const ApexGrowthScorecard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
-type AnswerValue = number | number[];
-type AnswerMap = Record<string, AnswerValue>;
-
-const [answers, setAnswers] = useState<AnswerMap>({});
-
+  const [answers, setAnswers] = useState<AnswerMap>({});
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
   const [showResults, setShowResults] = useState(false);
@@ -574,21 +601,20 @@ const [answers, setAnswers] = useState<AnswerMap>({});
   const [isLoading, setIsLoading] = useState(true);
 
   /* ------------------------ Tracking Helper ------------------------ */
- const trackEvent = useCallback((event: string, data: Record<string, unknown> = {}) => {
-  if (typeof window !== 'undefined') {
-    if (window.gtag) {
-      window.gtag('event', event, data);
-    }
-  }
-}, []);
-
-
+  const trackEvent = useCallback(
+    (event: string, data: Record<string, unknown> = {}) => {
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', event, data);
+      }
+    },
+    []
+  );
 
   /* ------------------------ Input Sanitization ------------------------ */
- const sanitizeInput = useCallback((input: string | null | undefined): string => {
-  if (!input) return '';
-  return input.replace(/[<>]/g, '').trim();
-}, []);
+  const sanitizeInput = useCallback((input: string | null | undefined): string => {
+    if (!input) return '';
+    return input.replace(/[<>]/g, '').trim();
+  }, []);
 
   /* ------------------------ Load Saved Progress ------------------------ */
   useEffect(() => {
@@ -600,7 +626,13 @@ const [answers, setAnswers] = useState<AnswerMap>({});
           currentStep: savedStep,
           email: savedEmail,
           company: savedCompany,
-        } = JSON.parse(saved);
+        } = JSON.parse(saved) as {
+          answers?: AnswerMap;
+          currentStep?: number;
+          email?: string;
+          company?: string;
+        };
+
         if (savedAnswers) setAnswers(savedAnswers);
         if (typeof savedStep === 'number') setCurrentStep(savedStep);
         if (savedEmail) setEmail(savedEmail);
@@ -630,7 +662,7 @@ const [answers, setAnswers] = useState<AnswerMap>({});
 
   /* ------------------------ Scoring Logic ------------------------ */
   const calculateScores = useCallback(() => {
-    const dimensionScores = dimensions.map((dim) => {
+    const dimensionScores: DimensionScore[] = dimensions.map((dim) => {
       let totalPoints = 0;
       let maxPoints = 0;
 
@@ -640,12 +672,13 @@ const [answers, setAnswers] = useState<AnswerMap>({});
           totalPoints += answer.reduce((sum, p) => sum + p, 0);
           maxPoints += 25;
         } else {
-          totalPoints += answer || 0;
+          totalPoints += (answer as number | undefined) ?? 0;
           maxPoints += 25;
         }
       });
 
       const percentage = maxPoints > 0 ? (totalPoints / maxPoints) * 100 : 0;
+
       return {
         name: dim.name,
         percentage: Math.round(percentage),
@@ -662,93 +695,75 @@ const [answers, setAnswers] = useState<AnswerMap>({});
     return { dimensionScores, totalScore };
   }, [answers]);
 
-  const getScoreStage = (score: number) => {
-  if (score >= 80)
-    return { stage: 'Leading', color: 'text-green-600', icon: '🏆' };
-  if (score >= 60)
-    return { stage: 'Growing', color: 'text-blue-600', icon: '📈' };
-  if (score >= 40)
-    return { stage: 'Developing', color: 'text-yellow-600', icon: '🌱' };
-  return { stage: 'Starting', color: 'text-orange-600', icon: '🚀' };
-};
+  const getRecommendations = useCallback(
+    (dimensionScores: DimensionScore[]): DimensionScoreWithRecommendations[] => {
+      return dimensionScores.map((dim) => {
+        let recommendations: string[];
 
+        if (dim.percentage < 40) {
+          recommendations = [
+            `Conduct a comprehensive audit of your ${dim.name.toLowerCase()}`,
+            'Allocate immediate resources to address critical gaps',
+            'Set up tracking to measure improvements',
+            'Consider professional consultation for rapid improvement',
+          ];
+        } else if (dim.percentage < 70) {
+          recommendations = [
+            `Optimize existing ${dim.name.toLowerCase()} processes`,
+            'Test new strategies to improve performance',
+            'Benchmark against industry leaders',
+            'Implement A/B testing for continuous improvement',
+          ];
+        } else {
+          recommendations = [
+            `Scale successful ${dim.name.toLowerCase()} strategies`,
+            'Explore advanced optimization techniques',
+            'Consider automation to maintain excellence',
+            'Share best practices across your organization',
+          ];
+        }
 
- interface DimensionScore {
-  dimension: string;
-  name: string;
-  score: number;
-  percentage: number;
-  questions: unknown[];
-}
-
-const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
-  return dimensionScores.map((dim) => {
-    let recommendations = [];
-
-    if (dim.percentage < 40) {
-      recommendations = [
-        `Conduct a comprehensive audit of your ${dim.name.toLowerCase()}`,
-        'Allocate immediate resources to address critical gaps',
-        'Set up tracking to measure improvements',
-        'Consider professional consultation for rapid improvement',
-      ];
-    } else if (dim.percentage < 70) {
-      recommendations = [
-        `Optimize existing ${dim.name.toLowerCase()} processes`,
-        'Test new strategies to improve performance',
-        'Benchmark against industry leaders',
-        'Implement A/B testing for continuous improvement',
-      ];
-    } else {
-      recommendations = [
-        `Scale successful ${dim.name.toLowerCase()} strategies`,
-        'Explore advanced optimization techniques',
-        'Consider automation to maintain excellence',
-        'Share best practices across your organization',
-      ];
-    }
-
-    return { ...dim, recommendations };
-  });
-}, []);
-
+        return { ...dim, recommendations };
+      });
+    },
+    []
+  );
 
   /* ------------------------ Answer Handler (Debounced, Safe) ------------------------ */
   const handleAnswer = useCallback(
-  debounce(
-    (questionId: string, points: number, multiSelect: boolean = false) => {
-      setAnswers((prev: AnswerMap) => {
-        if (multiSelect) {
-          const current = (prev[questionId] as number[] | undefined) || [];
-          const exists = current.includes(points);
-          const updated = exists
-            ? current.filter((p) => p !== points)
-            : [...current, points];
+    debounce(
+      (questionId: string, points: number, multiSelect: boolean = false) => {
+        setAnswers((prev: AnswerMap) => {
+          if (multiSelect) {
+            const current = (prev[questionId] as number[] | undefined) || [];
+            const exists = current.includes(points);
+            const updated = exists
+              ? current.filter((p) => p !== points)
+              : [...current, points];
+
+            return {
+              ...prev,
+              [questionId]: updated,
+            };
+          }
 
           return {
             ...prev,
-            [questionId]: updated,
+            [questionId]: points,
           };
-        }
+        });
 
-        return {
-          ...prev,
-          [questionId]: points,
-        };
-      });
-
-      trackEvent("question_answered", {
-        questionId,
-        action: multiSelect ? "multi" : "single",
-        points,
-        multiSelect,
-      });
-    },
-    300
-  ),
-  [trackEvent]
-);
-
+        trackEvent('question_answered', {
+          questionId,
+          action: multiSelect ? 'multi' : 'single',
+          points,
+          multiSelect,
+        });
+      },
+      300
+    ),
+    [trackEvent]
+  );
 
   /* ------------------------ Navigation ------------------------ */
   const handleNext = () => {
@@ -769,18 +784,16 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
   };
 
   /* ------------------------ Inputs ------------------------ */
- const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const sanitized = sanitizeInput(e.target.value);
-  setEmail(sanitized);
-  setError('');
-};
+  const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const sanitized = sanitizeInput(e.target.value);
+    setEmail(sanitized);
+    setError('');
+  };
 
-
- const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const sanitized = sanitizeInput(e.target.value);
-  setCompany(sanitized);
-};
-
+  const handleCompanyChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const sanitized = sanitizeInput(e.target.value);
+    setCompany(sanitized);
+  };
 
   /* ------------------------ Submit ------------------------ */
   const handleSubmit = async () => {
@@ -824,17 +837,17 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
         throw new Error('Submission failed');
       }
     } catch (err: unknown) {
-  console.error('Submission error:', err);
+      console.error('Submission error:', err);
 
-  const errorMessage =
-    err instanceof Error ? err.message : 'Unknown error occurred';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Unknown error occurred';
 
-  setError('Failed to submit. Please check your connection and try again.');
-  trackEvent('form_submission_error', { error: errorMessage });
-} finally {
-  setIsSubmitting(false);
-}
-
+      setError('Failed to submit. Please check your connection and try again.');
+      trackEvent('form_submission_error', { error: errorMessage });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   /* ------------------------ Derived UI State ------------------------ */
   const currentQuestion = allQuestions[currentStep];
@@ -842,7 +855,7 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
   const isAnswered =
     currentQuestion &&
     (currentQuestion.multiSelect
-      ? (answers[currentQuestion.id] || []).length > 0
+      ? ((answers[currentQuestion.id] as number[] | undefined) ?? []).length > 0
       : answers[currentQuestion.id] !== undefined);
 
   /* ------------------------ Loading ------------------------ */
@@ -862,7 +875,6 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
     const { dimensionScores, totalScore } = calculateScores();
     const scoreInfo = getScoreStage(totalScore);
 
-    // Sort by weakest dimension first
     const sortedByScore = [...dimensionScores].sort(
       (a, b) => a.percentage - b.percentage
     );
@@ -880,7 +892,8 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
                 alt="Apex Digital Africa"
                 className="h-12 sm:h-16 object-contain"
                 onError={(e) => {
-                  e.target.style.display = 'none';
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
                 }}
               />
             </div>
@@ -1057,7 +1070,8 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
                 alt="Apex Digital Africa"
                 className="h-10 sm:h-12 object-contain"
                 onError={(e) => {
-                  e.target.style.display = 'none';
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
                 }}
               />
             </div>
@@ -1145,7 +1159,6 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
           </div>
         </div>
 
-        {/* Loading Overlay */}
         {isSubmitting && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-8 rounded-2xl text-center max-w-sm mx-4">
@@ -1175,7 +1188,8 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
               alt="Apex Digital Africa"
               className="h-10 sm:h-12 object-contain"
               onError={(e) => {
-                e.target.style.display = 'none';
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
               }}
             />
           </div>
@@ -1222,53 +1236,63 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
 
             {/* Options */}
             <div className="space-y-3">
-              {currentQuestion.options.map((option, index) => {
-                const isSelected = currentQuestion.multiSelect
-                  ? (answers[currentQuestion.id] || []).includes(option.points)
-                  : answers[currentQuestion.id] === option.points;
+              {currentQuestion.options.map(
+                (
+                  option: { text: string; points: number },
+                  index: number
+                ) => {
+                  const currentValue = answers[
+                    currentQuestion.id
+                  ] as AnswerValue | undefined;
 
-                return (
-                  <button
-                    key={index}
-                    onClick={() =>
-                      handleAnswer(
-                        currentQuestion.id,
-                        option.points,
-                        currentQuestion.multiSelect
-                      )
-                    }
-                    className={`w-full p-4 rounded-xl border-2 text-left transition-all
+                  const isSelected = currentQuestion.multiSelect
+                    ? Array.isArray(currentValue) &&
+                      currentValue.includes(option.points)
+                    : currentValue === option.points;
+
+                  return (
+                    <button
+                      key={index}
+                      onClick={() =>
+                        handleAnswer(
+                          currentQuestion.id,
+                          option.points,
+                          Boolean(currentQuestion.multiSelect)
+                        )
+                      }
+                      className={`w-full p-4 rounded-xl border-2 text-left transition-all
                       ${
                         isSelected
                           ? 'border-blue-600 bg-blue-50 shadow-md'
                           : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                       }`}
-                    aria-pressed={isSelected}
-                    role={currentQuestion.multiSelect ? 'checkbox' : 'radio'}
-                    aria-label={`Select option: ${option.text}`}
-                  >
-                    <div className="flex items-start">
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 mr-3 flex-shrink-0 mt-0.5 flex items-center justify-center
+                      aria-pressed={isSelected}
+                      role={currentQuestion.multiSelect ? 'checkbox' : 'radio'}
+                      aria-label={`Select option: ${option.text}`}
+                    >
+                      <div className="flex items-start">
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 mr-3 flex-shrink-0 mt-0.5 flex items-center justify-center
                         ${
                           isSelected
                             ? 'border-blue-600 bg-blue-600'
                             : 'border-gray-300'
                         }`}
-                      >
-                        {isSelected && (
-                          <CheckCircle className="w-4 h-4 text-white" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900">
-                          {option.text}
+                        >
+                          {isSelected && (
+                            <CheckCircle className="w-4 h-4 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">
+                            {option.text}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                }
+              )}
             </div>
 
             {currentQuestion.multiSelect && (
@@ -1323,7 +1347,7 @@ const getRecommendations = useCallback((dimensionScores: DimensionScore[]) => {
 /* --------------------------------------------------------------------------
  * Export with Error Boundary
  * -------------------------------------------------------------------------- */
-const ApexGrowthScorecardWithErrorBoundary = () => (
+const ApexGrowthScorecardWithErrorBoundary: React.FC = () => (
   <ScorecardErrorBoundary>
     <ApexGrowthScorecard />
   </ScorecardErrorBoundary>
