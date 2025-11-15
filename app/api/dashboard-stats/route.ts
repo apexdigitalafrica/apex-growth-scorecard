@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       console.log('📦 Returning cached dashboard data');
       return NextResponse.json(cachedData, {
         headers: {
-          'Cache-Control': 'private, max-age=300', // 5 minutes browser cache
+          'Cache-Control': 'private, max-age=300',
           'X-Cache': 'HIT',
         },
       });
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate current period metrics
     const totalSubmissions = typedResponses?.length || 0;
-    const averageScore = totalSubmissions > 0
+    const averageScore = totalSubmissions > 0 && typedResponses
       ? typedResponses.reduce((sum, r) => sum + (r.total_score || 0), 0) / totalSubmissions
       : 0;
 
@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
         avg_percentage: data.sum / data.count,
         count: data.count,
       }))
-      .sort((a, b) => b.avg_percentage - a.avg_percentage); // Sort by performance
+      .sort((a, b) => b.avg_percentage - a.avg_percentage);
 
     // Calculate conversion metrics
     const conversionMetrics = calculateConversionMetrics(typedResponses);
@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
     // Build response object
     const dashboardData = {
       totalSubmissions,
-      averageScore: Math.round(averageScore * 100) / 100, // Round to 2 decimals
+      averageScore: Math.round(averageScore * 100) / 100,
       hotLeads,
       warmLeads,
       coldLeads,
@@ -284,13 +284,13 @@ function calculateTrends(
 ): TrendData {
   const current = {
     submissions: currentResponses?.length || 0,
-    avgScore: currentResponses?.reduce((sum, r) => sum + (r.total_score || 0), 0) / (currentResponses?.length || 1) || 0,
+    avgScore: (currentResponses?.reduce((sum, r) => sum + (r.total_score || 0), 0) ?? 0) / (currentResponses?.length || 1),
     hotLeads: currentResponses?.filter(r => r.lead_priority === 'Hot' || r.meta?.leadPriority === 'Hot').length || 0,
   };
 
   const previous = {
     submissions: previousResponses?.length || 0,
-    avgScore: previousResponses?.reduce((sum, r) => sum + (r.total_score || 0), 0) / (previousResponses?.length || 1) || 0,
+    avgScore: (previousResponses?.reduce((sum, r) => sum + (r.total_score || 0), 0) ?? 0) / (previousResponses?.length || 1),
     hotLeads: previousResponses?.filter(r => {
       const meta = r.meta as { leadPriority?: string } | undefined;
       return r.lead_priority === 'Hot' || meta?.leadPriority === 'Hot';
@@ -325,16 +325,11 @@ function calculateConversionMetrics(responses: ResponseWithMeta[] | null) {
   ).length;
 
   const hotLeadRate = Math.round((hotLeadCount / responses.length) * 100);
-
-  // Calculate average response time (time between submission and first action)
-  // For now, we'll use a placeholder - you can enhance this with real data
   const averageResponseTime = '< 2 hours';
 
   // Find most common industry/company type
   const industryMap = new Map<string, number>();
   responses.forEach(r => {
-    // You could extract industry from company name or add an industry field
-    // For now, we'll use a simple heuristic
     const company = r.company_name?.toLowerCase() || '';
     let industry = 'General';
     

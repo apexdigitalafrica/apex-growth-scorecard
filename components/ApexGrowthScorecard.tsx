@@ -1,5 +1,4 @@
 'use client';
-import { calculateLeadQuality } from '@/lib/lead-scoring';
 import React, {
   useState,
   useEffect,
@@ -522,7 +521,7 @@ const allQuestions: Question[] = dimensions.flatMap((dim, dimIndex) =>
     id: q.id,
     text: q.text,
     options: q.options,
-    // ensure every question has multiSelect (default false)
+// ensure every question has multiSelect (default false)  // 
     multiSelect: (q as { multiSelect?: boolean }).multiSelect ?? false,
     dimensionIndex: dimIndex,
     dimensionName: dim.name,
@@ -553,8 +552,8 @@ class ScorecardErrorBoundary extends React.Component<
     this.state = { hasError: false };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  static getDerivedStateFromError(_error: Error): ScorecardErrorBoundaryState {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars 
+  static getDerivedStateFromError(_: Error): ScorecardErrorBoundaryState {
     return { hasError: true };
   }
 
@@ -831,7 +830,7 @@ const ApexGrowthScorecard: React.FC = () => {
   try {
     const scores = calculateScores();
 
-    // 1. Submit to database (critical - blocks user flow)
+    {/* 1. Submit to database (critical - blocks user flow) */}
     const response = await fetch('/api/submit-scorecard', {
       method: 'POST',
       headers: {
@@ -850,7 +849,7 @@ const ApexGrowthScorecard: React.FC = () => {
       throw new Error('Submission failed');
     }
 
-    // 2. Send email with results (non-blocking - happens in background)
+    {/* 2. Send email with results (non-blocking - happens in background) */}
     const scoreInfo = getScoreStage(scores.totalScore);
     fetch('/api/send-results-email', {
       method: 'POST',
@@ -866,7 +865,7 @@ const ApexGrowthScorecard: React.FC = () => {
       }),
     }).catch(err => {
       console.error('Email sending failed (non-critical):', err);
-      // Don't block the user experience if email fails
+      {/* Don't block the user experience if email fails  */}
     });
 
     trackEvent('form_submission_success', { email, company });
@@ -958,7 +957,7 @@ const ApexGrowthScorecard: React.FC = () => {
                 'Significant opportunities for improvement ahead.'}
             </div>
           </div>
-		// This will be added to your results section, right after the Overall Score section
+		{/* This will be added to your results section, right after the Overall Score section  */}
 
 {/* Certificate Section - Add this after the Overall Score div */}
 <div className="bg-gradient-to-br from-white via-blue-50 to-yellow-50 border-4 border-yellow-400 rounded-3xl p-12 mb-8 shadow-2xl relative overflow-hidden print:break-before-page">
@@ -1086,7 +1085,6 @@ const ApexGrowthScorecard: React.FC = () => {
     <button
       onClick={() => {
         trackEvent('share_certificate', { platform: 'linkedin', company, score: totalScore });
-        const text = `I just completed the Apex Growth Scorecard™ and scored ${totalScore}/100! 🎯 Excited to implement these insights for digital growth. #DigitalMarketing #BusinessGrowth`;
         const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`;
         window.open(url, '_blank');
       }}
@@ -1221,7 +1219,7 @@ const ApexGrowthScorecard: React.FC = () => {
                 className="bg-indigo-700 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold hover:bg-indigo-800 transition"
                 onClick={() => {
                   trackEvent('cta_click', { type: 'download_report' });
-                  // TODO: Replace window.print() with real PDF generation & download
+			 {/* TODO: Replace window.print() with real PDF generation & download  */}
                   window.print();
                 }}
               >

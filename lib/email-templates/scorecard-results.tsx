@@ -47,7 +47,7 @@ export default function ScorecardResultsEmail({
           <Section style={scoreSection}>
             <Text style={greeting}>Hi {company} Team! 👋</Text>
             <Text style={paragraph}>
-              Thank you for completing the Apex Growth Scorecard™. Here's your comprehensive digital growth assessment:
+			Thank you for completing the Apex Growth Scorecard™. Here&apos;s your comprehensive digital growth assessment:
             </Text>
             
             <div style={scoreCard}>
