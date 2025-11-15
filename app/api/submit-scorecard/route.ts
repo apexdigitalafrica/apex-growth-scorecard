@@ -49,14 +49,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Determine stage from totalScore
-    const totalScore = score.totalScore ?? 0;
-    let totalStage: string;
-    if (totalScore >= 80) totalStage = 'Leading';
-    else if (totalScore >= 60) totalStage = 'Growing';
-    else if (totalScore >= 40) totalStage = 'Developing';
-    else totalStage = 'Starting';
-
     // STEP 1: Get the scorecard (with detailed logging)
     console.log('🔍 Looking up scorecard...');
     const { data: scorecard, error: scError } = await client
@@ -149,13 +141,12 @@ export async function POST(req: Request) {
 
     // STEP 4: Upsert contact
     console.log('👤 Upserting contact...');
-    const { data: contact, error: contactError } = await supabaseAdmin
+    const { data: contact, error: contactError } = await client
       .from('contacts')
       .upsert(
         {
           organization_id: organizationId,
           email: email.toLowerCase().trim(),
-          updated_at: new Date().toISOString(),
         },
         { onConflict: 'email,organization_id' }
       )
@@ -164,11 +155,21 @@ export async function POST(req: Request) {
 
     if (contactError) {
       console.error('⚠️ Contact upsert error (non-critical):', contactError);
+      // Also not fatal – we can still save the response
     } else {
       console.log('✅ Contact upserted:', contact?.id);
     }
 
     const contactId = contact?.id ?? null;
+
+    // STEP 5: Determine stage label from totalScore
+    const totalScore = score.totalScore ?? 0;
+    let totalStage: string;
+
+    if (totalScore >= 80) totalStage = 'Leading';
+    else if (totalScore >= 60) totalStage = 'Growing';
+    else if (totalScore >= 40) totalStage = 'Developing';
+    else totalStage = 'Starting';
 
     // STEP 6: Insert main response
     console.log('💾 Inserting scorecard response...');
