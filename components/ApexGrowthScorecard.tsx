@@ -1,4 +1,5 @@
 'use client';
+import { calculateLeadQuality } from '@/lib/lead-scoring';
 import React, {
   useState,
   useEffect,
@@ -811,7 +812,7 @@ const ApexGrowthScorecard: React.FC = () => {
   };
 
   /* ------------------------ Submit ------------------------ */
- const handleSubmit = async () => {
+const handleSubmit = async () => {
   if (!email || !company) {
     setError('Please fill in all required fields');
     return;
@@ -829,8 +830,16 @@ const ApexGrowthScorecard: React.FC = () => {
 
   try {
     const scores = calculateScores();
+    
+    // ✅ ADD THIS: Calculate lead quality
+    const leadQuality = calculateLeadQuality(
+      scores.totalScore, 
+      scores.dimensionScores
+    );
 
-    {/* 1. Submit to database (critical - blocks user flow) */}
+    console.log('🎯 Lead Quality:', leadQuality); // Debug log
+
+    // 1. Submit to database (critical - blocks user flow)
     const response = await fetch('/api/submit-scorecard', {
       method: 'POST',
       headers: {
@@ -841,6 +850,7 @@ const ApexGrowthScorecard: React.FC = () => {
         company: sanitizeInput(company),
         answers,
         score: scores,
+        leadQuality, // ✅ ADD THIS
         timestamp: new Date().toISOString(),
       }),
     });
@@ -849,7 +859,7 @@ const ApexGrowthScorecard: React.FC = () => {
       throw new Error('Submission failed');
     }
 
-    {/* 2. Send email with results (non-blocking - happens in background) */}
+    // 2. Send email with results (non-blocking - happens in background)
     const scoreInfo = getScoreStage(scores.totalScore);
     fetch('/api/send-results-email', {
       method: 'POST',
@@ -865,10 +875,16 @@ const ApexGrowthScorecard: React.FC = () => {
       }),
     }).catch(err => {
       console.error('Email sending failed (non-critical):', err);
-      {/* Don't block the user experience if email fails  */}
+      // Don't block the user experience if email fails
     });
 
-    trackEvent('form_submission_success', { email, company });
+    trackEvent('form_submission_success', { 
+      email, 
+      company,
+      leadPriority: leadQuality.priority, // ✅ ADD THIS
+      leadScore: leadQuality.score, // ✅ ADD THIS
+    });
+    
     setShowResults(true);
     localStorage.removeItem(SCORECARD_STORAGE_KEY);
 
@@ -882,6 +898,7 @@ const ApexGrowthScorecard: React.FC = () => {
     setIsSubmitting(false);
   }
 };
+
 
 
   /* ------------------------ Derived UI State ------------------------ */
