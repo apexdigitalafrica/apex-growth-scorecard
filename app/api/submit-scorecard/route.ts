@@ -26,7 +26,10 @@ export async function POST(req: Request) {
   if (!client) {
     console.error('Supabase admin client is not initialised');
     return NextResponse.json(
-      { error: 'Server misconfiguration: database not available' },
+      {
+        error: 'Server misconfiguration: database not available',
+        details: 'supabaseAdmin was null',
+      },
       { status: 500 }
     );
   }
@@ -52,7 +55,10 @@ export async function POST(req: Request) {
     if (scError || !scorecard) {
       console.error('Scorecard lookup error', scError);
       return NextResponse.json(
-        { error: 'Scorecard not configured' },
+        {
+          error: 'Scorecard not configured',
+          details: scError?.message ?? scError ?? 'No scorecard row found',
+        },
         { status: 500 }
       );
     }
@@ -68,7 +74,10 @@ export async function POST(req: Request) {
     if (dimsError || !dims) {
       console.error('Dimensions lookup error', dimsError);
       return NextResponse.json(
-        { error: 'Dimensions not configured' },
+        {
+          error: 'Dimensions not configured',
+          details: dimsError?.message ?? dimsError ?? 'No dimensions found',
+        },
         { status: 500 }
       );
     }
@@ -90,6 +99,7 @@ export async function POST(req: Request) {
 
     if (orgError) {
       console.error('Org upsert error', orgError);
+      // Not fatal – we can still store the response without an organization_id
     }
 
     const organizationId = org?.id ?? null;
@@ -109,6 +119,7 @@ export async function POST(req: Request) {
 
     if (contactError) {
       console.error('Contact upsert error', contactError);
+      // Also not fatal – we can still save the response
     }
 
     const contactId = contact?.id ?? null;
@@ -145,7 +156,10 @@ export async function POST(req: Request) {
     if (respError || !response) {
       console.error('Response insert error', respError);
       return NextResponse.json(
-        { error: 'Failed to save score' },
+        {
+          error: 'Failed to save score',
+          details: respError?.message ?? respError ?? 'Unknown insert error',
+        },
         { status: 500 }
       );
     }
@@ -155,16 +169,25 @@ export async function POST(req: Request) {
     // 6) Insert dimension scores
     const dimensionScores = score.dimensionScores ?? [];
 
-    const dimScoreRows = dimensionScores.map((dimScore) => {
-      const dimMeta = dims.find((d) => d.name === dimScore.name);
+    const dimScoreRows = dimensionScores
+      .map((dimScore) => {
+        const dimMeta = dims.find((d) => d.name === dimScore.name);
 
-      return {
-        response_id: responseId,
-        dimension_id: dimMeta?.id ?? null,
-        percentage: dimScore.percentage,
-        weighted_score: dimScore.weightedScore,
-      };
-    });
+        if (!dimMeta) {
+          console.warn(
+            `No matching dimension found for "${dimScore.name}". Skipping this dimension score.`
+          );
+          return null;
+        }
+
+        return {
+          response_id: responseId,
+          dimension_id: dimMeta.id,
+          percentage: dimScore.percentage,
+          weighted_score: dimScore.weightedScore,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
 
     if (dimScoreRows.length > 0) {
       const { error: dsError } = await client
@@ -173,6 +196,7 @@ export async function POST(req: Request) {
 
       if (dsError) {
         console.error('Dimension scores insert error', dsError);
+        // We don't fail the whole request here; scores are still saved in the main table.
       }
     }
 
@@ -196,10 +220,13 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true, responseId, totalScore, totalStage });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unhandled submit-scorecard error', error);
     return NextResponse.json(
-      { error: 'Unexpected server error' },
+      {
+        error: 'Unexpected server error',
+        details: error?.message ?? String(error),
+      },
       { status: 500 }
     );
   }
