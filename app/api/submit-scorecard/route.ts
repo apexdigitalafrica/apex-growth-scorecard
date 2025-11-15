@@ -1,4 +1,3 @@
-// app/api/submit-scorecard/route.ts
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -15,10 +14,20 @@ type ScorePayload = {
       weightedScore: number;
     }[];
   };
-  // optional in future: meta, utm, userAgent, etc.
 };
 
 export async function POST(req: Request) {
+  // ✅ Safely handle the "possibly null" client
+  const client = supabaseAdmin;
+
+  if (!client) {
+    console.error('Supabase admin client is not initialised');
+    return NextResponse.json(
+      { error: 'Server misconfiguration: database not available' },
+      { status: 500 }
+    );
+  }
+
   try {
     const body: ScorePayload = await req.json();
     const { email, company, answers, score } = body;
@@ -31,7 +40,7 @@ export async function POST(req: Request) {
     }
 
     // 1) Get the scorecard + dimensions
-    const { data: scorecard, error: scError } = await supabaseAdmin
+    const { data: scorecard, error: scError } = await client
       .from('scorecards')
       .select('id')
       .eq('code', 'apex_b2b_growth_v1')
@@ -47,7 +56,7 @@ export async function POST(req: Request) {
 
     const scorecardId = scorecard.id as string;
 
-    const { data: dims, error: dimsError } = await supabaseAdmin
+    const { data: dims, error: dimsError } = await client
       .from('dimensions')
       .select('id, name, code')
       .eq('scorecard_id', scorecardId);
@@ -63,7 +72,7 @@ export async function POST(req: Request) {
     // 2) Upsert organization
     const slug = company.trim().toLowerCase().replace(/\s+/g, '-');
 
-    const { data: org, error: orgError } = await supabaseAdmin
+    const { data: org, error: orgError } = await client
       .from('organizations')
       .upsert(
         {
@@ -77,13 +86,12 @@ export async function POST(req: Request) {
 
     if (orgError) {
       console.error('Org upsert error', orgError);
-      // not fatal – continue without org id
     }
 
     const organizationId = org?.id ?? null;
 
     // 3) Upsert contact
-    const { data: contact, error: contactError } = await supabaseAdmin
+    const { data: contact, error: contactError } = await client
       .from('contacts')
       .upsert(
         {
@@ -111,7 +119,7 @@ export async function POST(req: Request) {
     else totalStage = 'Starting';
 
     // 5) Insert main response
-    const { data: response, error: respError } = await supabaseAdmin
+    const { data: response, error: respError } = await client
       .from('scorecard_responses')
       .insert({
         scorecard_id: scorecardId,
@@ -153,7 +161,7 @@ export async function POST(req: Request) {
     });
 
     if (dimScoreRows.length > 0) {
-      const { error: dsError } = await supabaseAdmin
+      const { error: dsError } = await client
         .from('dimension_scores')
         .insert(dimScoreRows);
 
@@ -163,7 +171,7 @@ export async function POST(req: Request) {
     }
 
     // 7) Log analytics event
-    await supabaseAdmin.from('analytics_events').insert({
+    await client.from('analytics_events').insert({
       event_name: 'scorecard_submitted',
       scorecard_id: scorecardId,
       organization_id: organizationId,
