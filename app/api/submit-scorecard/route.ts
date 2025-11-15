@@ -9,6 +9,14 @@ type DimensionScoreInput = {
   weightedScore: number;
 };
 
+// Add LeadQuality type
+type LeadQuality = {
+  score: number;
+  priority: 'Hot' | 'Warm' | 'Cold';
+  readiness: string;
+  recommendedAction: string;
+};
+
 type ScorePayload = {
   email: string;
   company: string;
@@ -17,12 +25,12 @@ type ScorePayload = {
     totalScore: number;
     dimensionScores: DimensionScoreInput[];
   };
+  leadQuality?: LeadQuality; // Add this - optional for backward compatibility
 };
 
 export async function POST(req: Request) {
   console.log('🚀 Submit scorecard API called');
 
-  // Safely handle the "possibly null" client
   const client = supabaseAdmin;
 
   if (!client) {
@@ -38,9 +46,15 @@ export async function POST(req: Request) {
 
   try {
     const body: ScorePayload = await req.json();
-    const { email, company, answers, score } = body;
+    const { email, company, answers, score, leadQuality } = body;
 
-    console.log('📧 Submission received:', { email, company, totalScore: score.totalScore });
+    console.log('📧 Submission received:', { 
+      email, 
+      company, 
+      totalScore: score.totalScore,
+      leadPriority: leadQuality?.priority,
+      leadScore: leadQuality?.score,
+    });
 
     if (!email || !company) {
       return NextResponse.json(
@@ -49,7 +63,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // STEP 1: Get the scorecard (with detailed logging)
+    // STEP 1: Get the scorecard
     console.log('🔍 Looking up scorecard...');
     const { data: scorecard, error: scError } = await client
       .from('scorecards')
@@ -132,7 +146,6 @@ export async function POST(req: Request) {
 
     if (orgError) {
       console.error('⚠️ Org upsert error (non-critical):', orgError);
-      // Not fatal – we can still store the response without an organization_id
     } else {
       console.log('✅ Organization upserted:', org?.id);
     }
@@ -155,7 +168,6 @@ export async function POST(req: Request) {
 
     if (contactError) {
       console.error('⚠️ Contact upsert error (non-critical):', contactError);
-      // Also not fatal – we can still save the response
     } else {
       console.log('✅ Contact upserted:', contact?.id);
     }
@@ -171,8 +183,8 @@ export async function POST(req: Request) {
     else if (totalScore >= 40) totalStage = 'Developing';
     else totalStage = 'Starting';
 
-    // STEP 6: Insert main response
-    console.log('💾 Inserting scorecard response...');
+    // STEP 6: Insert main response WITH lead scoring data
+    console.log('💾 Inserting scorecard response with lead scoring...');
     const { data: response, error: respError } = await client
       .from('scorecard_responses')
       .insert({
@@ -184,9 +196,16 @@ export async function POST(req: Request) {
         total_score: totalScore,
         total_stage: totalStage,
         raw_answers: answers,
+        // NEW: Add lead scoring fields
+        lead_score: leadQuality?.score ?? null,
+        lead_priority: leadQuality?.priority ?? null,
+        lead_readiness: leadQuality?.readiness ?? null,
+        recommended_action: leadQuality?.recommendedAction ?? null,
         meta: {
           source: 'apex_growth_scorecard',
           userAgent: req.headers.get('user-agent'),
+          // Also store in meta for easy querying
+          leadQuality: leadQuality ?? null,
         },
       })
       .select()
@@ -204,6 +223,7 @@ export async function POST(req: Request) {
     }
 
     console.log('✅ Response saved:', response.id);
+    console.log(`🎯 Lead Priority: ${leadQuality?.priority} (Score: ${leadQuality?.score})`);
     const responseId = response.id as string;
 
     // STEP 7: Insert dimension scores
@@ -237,13 +257,12 @@ export async function POST(req: Request) {
 
       if (dsError) {
         console.error('⚠️ Dimension scores insert error (non-critical):', dsError);
-        // We don't fail the whole request here; scores are still saved in the main table.
       } else {
         console.log(`✅ Inserted ${dimScoreRows.length} dimension scores`);
       }
     }
 
-    // STEP 8: Log analytics event (non-blocking if it fails)
+    // STEP 8: Log analytics event with lead data
     console.log('📈 Logging analytics event...');
     const { error: analyticsError } = await client
       .from('analytics_events')
@@ -256,6 +275,9 @@ export async function POST(req: Request) {
         properties: {
           totalScore,
           totalStage,
+          leadScore: leadQuality?.score,
+          leadPriority: leadQuality?.priority,
+          leadReadiness: leadQuality?.readiness,
         },
       });
 
@@ -270,7 +292,9 @@ export async function POST(req: Request) {
       ok: true, 
       responseId, 
       totalScore, 
-      totalStage 
+      totalStage,
+      leadPriority: leadQuality?.priority,
+      leadScore: leadQuality?.score,
     });
 
   } catch (error: unknown) {

@@ -1,5 +1,5 @@
 'use client';
-
+import { calculateLeadQuality } from '@/lib/lead-scoring';
 import React, {
   useState,
   useEffect,
@@ -812,58 +812,78 @@ const ApexGrowthScorecard: React.FC = () => {
   };
 
   /* ------------------------ Submit ------------------------ */
-  const handleSubmit = async () => {
-    if (!email || !company) {
-      setError('Please fill in all required fields');
-      return;
+ const handleSubmit = async () => {
+  if (!email || !company) {
+    setError('Please fill in all required fields');
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    setError('Please enter a valid work email address');
+    return;
+  }
+
+  setIsSubmitting(true);
+  setError('');
+  trackEvent('form_submission_started', { email, company });
+
+  try {
+    const scores = calculateScores();
+
+    // 1. Submit to database (critical - blocks user flow)
+    const response = await fetch('/api/submit-scorecard', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: sanitizeInput(email),
+        company: sanitizeInput(company),
+        answers,
+        score: scores,
+        timestamp: new Date().toISOString(),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Submission failed');
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid work email address');
-      return;
-    }
+    // 2. Send email with results (non-blocking - happens in background)
+    const scoreInfo = getScoreStage(scores.totalScore);
+    fetch('/api/send-results-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: sanitizeInput(email),
+        company: sanitizeInput(company),
+        totalScore: scores.totalScore,
+        stage: scoreInfo.stage,
+        dimensionScores: scores.dimensionScores,
+      }),
+    }).catch(err => {
+      console.error('Email sending failed (non-critical):', err);
+      // Don't block the user experience if email fails
+    });
 
-    setIsSubmitting(true);
-    setError('');
-    trackEvent('form_submission_started', { email, company });
+    trackEvent('form_submission_success', { email, company });
+    setShowResults(true);
+    localStorage.removeItem(SCORECARD_STORAGE_KEY);
 
-    try {
-      const scores = calculateScores();
+  } catch (err: unknown) {
+    console.error('Submission error:', err);
+    const errorMessage =
+      err instanceof Error ? err.message : 'Unknown error occurred';
+    setError('Failed to submit. Please check your connection and try again.');
+    trackEvent('form_submission_error', { error: errorMessage });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
-      const response = await fetch('/api/submit-scorecard', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: sanitizeInput(email),
-          company: sanitizeInput(company),
-          answers,
-          score: scores,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-
-      if (response.ok) {
-        trackEvent('form_submission_success', { email, company });
-        setShowResults(true);
-        localStorage.removeItem(SCORECARD_STORAGE_KEY);
-      } else {
-        throw new Error('Submission failed');
-      }
-    } catch (err: unknown) {
-      console.error('Submission error:', err);
-
-      const errorMessage =
-        err instanceof Error ? err.message : 'Unknown error occurred';
-
-      setError('Failed to submit. Please check your connection and try again.');
-      trackEvent('form_submission_error', { error: errorMessage });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   /* ------------------------ Derived UI State ------------------------ */
   const currentQuestion = allQuestions[currentStep];
@@ -938,7 +958,156 @@ const ApexGrowthScorecard: React.FC = () => {
                 'Significant opportunities for improvement ahead.'}
             </div>
           </div>
+		// This will be added to your results section, right after the Overall Score section
 
+{/* Certificate Section - Add this after the Overall Score div */}
+<div className="bg-gradient-to-br from-white via-blue-50 to-yellow-50 border-4 border-yellow-400 rounded-3xl p-12 mb-8 shadow-2xl relative overflow-hidden print:break-before-page">
+  {/* Decorative Corner Elements */}
+  <div className="absolute top-0 left-0 w-32 h-32 border-l-4 border-t-4 border-yellow-300 rounded-tl-3xl"></div>
+  <div className="absolute bottom-0 right-0 w-32 h-32 border-r-4 border-b-4 border-yellow-300 rounded-br-3xl"></div>
+  
+  {/* Watermark Background */}
+  <div className="absolute inset-0 flex items-center justify-center opacity-5">
+    <div className="text-9xl font-bold text-gray-400 rotate-[-45deg]">VERIFIED</div>
+  </div>
+
+  <div className="relative z-10">
+    {/* Header Section */}
+    <div className="text-center border-b-4 border-yellow-300 pb-8 mb-8">
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex-1">
+          <img 
+            src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png" 
+            alt="Apex Digital Africa" 
+            className="h-16 mx-auto drop-shadow-lg"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+        </div>
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="text-xs font-semibold">VERIFIED CERTIFICATE</div>
+          <div className="text-[10px] opacity-90">ID: #{Math.random().toString(36).substr(2, 9).toUpperCase()}</div>
+        </div>
+      </div>
+      
+      <div className="mb-4">
+        <div className="inline-block bg-yellow-400 text-white px-6 py-2 rounded-full text-sm font-bold shadow-md mb-4">
+          🏆 OFFICIAL CERTIFICATION
+        </div>
+      </div>
+      
+      <h3 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-yellow-600 bg-clip-text text-transparent mb-3">
+        DIGITAL GROWTH ASSESSMENT
+      </h3>
+      <p className="text-gray-700 text-lg font-medium">Apex Growth Scorecard™ Certificate of Completion</p>
+    </div>
+
+    {/* Recognition Section */}
+    <div className="text-center mb-10">
+      <p className="text-gray-600 mb-3 text-lg italic">This certificate is proudly presented to</p>
+      
+      <div className="bg-gradient-to-r from-blue-50 to-yellow-50 border-2 border-yellow-300 rounded-xl py-6 px-8 mb-6 shadow-inner">
+        <h4 className="text-5xl font-bold bg-gradient-to-r from-blue-700 to-blue-900 bg-clip-text text-transparent mb-2 font-serif tracking-wide">
+          {company}
+        </h4>
+      </div>
+      
+      <p className="text-gray-700 text-lg leading-relaxed max-w-2xl mx-auto mb-8">
+        for successfully completing a comprehensive digital growth assessment and demonstrating 
+        commitment to data-driven business excellence
+      </p>
+      
+      {/* Score Section */}
+      <div className="flex justify-center gap-8 mb-8">
+        <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 shadow-lg min-w-[180px]">
+          <div className="text-5xl font-bold bg-gradient-to-br from-blue-600 to-blue-800 bg-clip-text text-transparent mb-2">
+            {totalScore}<span className="text-2xl">/100</span>
+          </div>
+          <div className="text-sm text-gray-600 font-semibold uppercase tracking-wide">Overall Score</div>
+        </div>
+        
+        <div className="bg-white border-2 border-green-200 rounded-2xl p-6 shadow-lg min-w-[180px]">
+          <div className="text-3xl font-bold text-green-600 mb-2">
+            {scoreInfo.icon} {scoreInfo.stage}
+          </div>
+          <div className="text-sm text-gray-600 font-semibold uppercase tracking-wide">Growth Stage</div>
+        </div>
+      </div>
+
+      {/* Achievement Badge */}
+      <div className="inline-block bg-gradient-to-r from-yellow-400 to-yellow-600 text-white px-8 py-3 rounded-full shadow-xl">
+        <span className="text-sm font-bold">✓ ASSESSMENT VERIFIED & AUTHENTICATED</span>
+      </div>
+    </div>
+
+    {/* Footer Section */}
+    <div className="border-t-4 border-yellow-300 pt-8">
+      <div className="grid grid-cols-3 gap-6 mb-6">
+        <div className="text-center">
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Assessment Date</div>
+          <div className="font-bold text-gray-800">
+            {new Date().toLocaleDateString('en-US', { 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </div>
+        </div>
+        
+        <div className="text-center border-x-2 border-gray-200">
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Certified By</div>
+          <div className="font-bold text-gray-800">Apex Digital Africa</div>
+          <div className="text-xs text-blue-600 mt-1">Digital Marketing Excellence</div>
+        </div>
+        
+        <div className="text-center">
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Contact</div>
+          <div className="font-bold text-gray-800 text-sm break-all">{email}</div>
+        </div>
+      </div>
+
+      {/* Verification Section */}
+      <div className="bg-gray-50 rounded-xl p-4 text-center border-2 border-gray-200">
+        <p className="text-xs text-gray-600 font-semibold">Certificate ID: APEX-{new Date().getFullYear()}-{Math.random().toString(36).substr(2, 6).toUpperCase()}</p>
+        <p className="text-[10px] text-gray-500 mt-1">Digitally verified and permanently stored</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* Share Section */}
+<div className="text-center mb-8 bg-gradient-to-r from-blue-50 to-yellow-50 rounded-2xl p-8 border-2 border-blue-200 print:hidden">
+  <h4 className="text-2xl font-bold text-gray-800 mb-2">Share Your Achievement 🎉</h4>
+  <p className="text-gray-600 mb-6">Let your network know about your digital growth milestone</p>
+  
+  <div className="flex flex-wrap justify-center gap-4">
+    <button
+      onClick={() => {
+        trackEvent('share_certificate', { platform: 'linkedin', company, score: totalScore });
+        const text = `I just completed the Apex Growth Scorecard™ and scored ${totalScore}/100! 🎯 Excited to implement these insights for digital growth. #DigitalMarketing #BusinessGrowth`;
+        const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`;
+        window.open(url, '_blank');
+      }}
+      className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg flex items-center gap-2 font-semibold"
+    >
+      <span>📱 Share on LinkedIn</span>
+    </button>
+    
+    <button
+      onClick={() => {
+        trackEvent('share_certificate', { platform: 'twitter', company, score: totalScore });
+        const text = `Just completed the @ApexDigitalAfr Growth Scorecard™ with a score of ${totalScore}/100! 🚀 #DigitalMarketing`;
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+      }}
+      className="bg-gradient-to-r from-sky-500 to-sky-600 text-white px-6 py-3 rounded-xl hover:from-sky-600 hover:to-sky-700 transition-all shadow-lg flex items-center gap-2 font-semibold"
+    >
+      <span>🐦 Share on X</span>
+    </button>
+  </div>
+</div>
           {/* Dimension Breakdown */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">

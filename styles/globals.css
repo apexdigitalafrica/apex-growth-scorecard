@@ -1,0 +1,26 @@
+// 1. Add this CSS to your globals.css or add it to a <style> tag in the component
+
+/*
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  
+  .print\\:hidden {
+    display: none !important;
+  }
+  
+  .print\\:break-before-page {
+    break-before: page;
+  }
+  
+  button, .no-print {
+    display: none !important;
+  }
+}
