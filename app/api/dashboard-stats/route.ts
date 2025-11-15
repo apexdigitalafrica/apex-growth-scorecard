@@ -2,13 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-// Types for better type safety
-interface DimensionScore {
-  percentage: number;
-  dimensions: { name: string } | null;
-}
-
-interface ResponseRecord {
+// Response type for database queries
+interface ResponseWithMeta {
+  id: string;
   total_score: number;
   total_stage: string;
   company_name: string;
@@ -30,9 +26,14 @@ interface TrendData {
   hotLeadsChange: number;
 }
 
+interface DimensionScoreResult {
+  percentage: number;
+  dimensions: { name: string } | null;
+}
+
 // Cache configuration (5 minutes for production)
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-let cachedData: any = null;
+let cachedData: Record<string, unknown> | null = null;
 let cacheTimestamp = 0;
 
 export async function GET(request: NextRequest) {
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
     // QUERY 2: Get previous period for trend calculation
     const { data: previousResponses, error: prevError } = await client
       .from('scorecard_responses')
-      .select('total_score, lead_priority')
+      .select('total_score, lead_priority, meta')
       .gte('created_at', previousDateFilter)
       .lt('created_at', dateFilter);
 
@@ -103,30 +104,38 @@ export async function GET(request: NextRequest) {
       console.warn('⚠️ Previous period query error:', prevError);
     }
 
+    // Cast responses to proper type
+    const typedResponses = responses as ResponseWithMeta[] | null;
+    const typedPreviousResponses = previousResponses as Array<{
+      total_score: number;
+      lead_priority?: string;
+      meta?: Record<string, unknown>;
+    }> | null;
+
     // Calculate current period metrics
-    const totalSubmissions = responses?.length || 0;
+    const totalSubmissions = typedResponses?.length || 0;
     const averageScore = totalSubmissions > 0
-      ? responses.reduce((sum, r) => sum + (r.total_score || 0), 0) / totalSubmissions
+      ? typedResponses.reduce((sum, r) => sum + (r.total_score || 0), 0) / totalSubmissions
       : 0;
 
     // Count leads by priority (use direct columns, fallback to meta)
-    const hotLeads = responses?.filter(r => 
+    const hotLeads = typedResponses?.filter(r => 
       r.lead_priority === 'Hot' || r.meta?.leadPriority === 'Hot'
     ).length || 0;
     
-    const warmLeads = responses?.filter(r => 
+    const warmLeads = typedResponses?.filter(r => 
       r.lead_priority === 'Warm' || r.meta?.leadPriority === 'Warm'
     ).length || 0;
     
-    const coldLeads = responses?.filter(r => 
+    const coldLeads = typedResponses?.filter(r => 
       r.lead_priority === 'Cold' || r.meta?.leadPriority === 'Cold'
     ).length || 0;
 
     // Calculate trends (compare to previous period)
-    const trends = calculateTrends(responses, previousResponses);
+    const trends = calculateTrends(typedResponses, typedPreviousResponses);
 
     // Get recent submissions (limit to 20 for performance)
-    const recentSubmissions = responses?.slice(0, 20).map(r => ({
+    const recentSubmissions = typedResponses?.slice(0, 20).map(r => ({
       id: r.id,
       company_name: r.company_name,
       email: r.email,
@@ -154,10 +163,13 @@ export async function GET(request: NextRequest) {
       console.warn('⚠️ Dimension scores query error:', dimensionError);
     }
 
+    // Cast dimension scores to proper type
+    const typedDimensionScores = dimensionScores as DimensionScoreResult[] | null;
+
     // Aggregate dimension averages efficiently
     const dimensionMap = new Map<string, { sum: number; count: number }>();
     
-    dimensionScores?.forEach((score: any) => {
+    typedDimensionScores?.forEach((score) => {
       const dimName = score.dimensions?.name;
       if (dimName && score.percentage != null) {
         const current = dimensionMap.get(dimName) || { sum: 0, count: 0 };
@@ -177,7 +189,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.avg_percentage - a.avg_percentage); // Sort by performance
 
     // Calculate conversion metrics
-    const conversionMetrics = calculateConversionMetrics(responses);
+    const conversionMetrics = calculateConversionMetrics(typedResponses);
 
     // Build response object
     const dashboardData = {
@@ -263,8 +275,12 @@ function getPreviousDateFilter(range: string): string {
 
 // Helper: Calculate trends by comparing current vs previous period
 function calculateTrends(
-  currentResponses: any[] | null,
-  previousResponses: any[] | null
+  currentResponses: ResponseWithMeta[] | null,
+  previousResponses: Array<{ 
+    total_score: number; 
+    lead_priority?: string; 
+    meta?: Record<string, unknown> 
+  }> | null
 ): TrendData {
   const current = {
     submissions: currentResponses?.length || 0,
@@ -275,7 +291,10 @@ function calculateTrends(
   const previous = {
     submissions: previousResponses?.length || 0,
     avgScore: previousResponses?.reduce((sum, r) => sum + (r.total_score || 0), 0) / (previousResponses?.length || 1) || 0,
-    hotLeads: previousResponses?.filter(r => r.lead_priority === 'Hot' || r.meta?.leadPriority === 'Hot').length || 0,
+    hotLeads: previousResponses?.filter(r => {
+      const meta = r.meta as { leadPriority?: string } | undefined;
+      return r.lead_priority === 'Hot' || meta?.leadPriority === 'Hot';
+    }).length || 0,
   };
 
   return {
@@ -292,7 +311,7 @@ function calculateTrends(
 }
 
 // Helper: Calculate conversion metrics
-function calculateConversionMetrics(responses: any[] | null) {
+function calculateConversionMetrics(responses: ResponseWithMeta[] | null) {
   if (!responses || responses.length === 0) {
     return {
       hotLeadRate: 0,

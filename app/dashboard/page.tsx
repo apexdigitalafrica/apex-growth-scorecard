@@ -8,10 +8,7 @@ import {
   Award, 
   Download,
   RefreshCw,
-  Filter,
-  ChevronDown,
   Search,
-  Calendar,
   BarChart3,
   ArrowUpRight,
   ArrowDownRight

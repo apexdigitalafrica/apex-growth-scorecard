@@ -1,3 +1,5 @@
+// lib/lead-scoring.ts
+
 interface DimensionScore {
   name: string;
   percentage: number;
@@ -5,8 +7,6 @@ interface DimensionScore {
   color: string;
   weightedScore: number;
 }
-
-type AnswerMap = Record<string, number | number[]>;
 
 export interface LeadQuality {
   score: number;
@@ -17,8 +17,7 @@ export interface LeadQuality {
 
 export const calculateLeadQuality = (
   totalScore: number,
-  dimensionScores: DimensionScore[],
-  answers: AnswerMap
+  dimensionScores: DimensionScore[]
 ): LeadQuality => {
   let leadScore = 0;
   
@@ -32,8 +31,8 @@ export const calculateLeadQuality = (
   const sorted = [...dimensionScores].sort((a, b) => a.percentage - b.percentage);
   const weakestDim = sorted[0];
   
-  if (weakestDim.percentage < 30) leadScore += 30; // Critical need
-  else if (weakestDim.percentage < 50) leadScore += 20; // Moderate need
+  if (weakestDim && weakestDim.percentage < 30) leadScore += 30; // Critical need
+  else if (weakestDim && weakestDim.percentage < 50) leadScore += 20; // Moderate need
   else leadScore += 10; // Low need
   
   // Score based on high-value dimensions (0-30 points)
