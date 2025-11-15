@@ -1,15 +1,21 @@
 // lib/supabaseAdmin.ts
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// Don’t crash build – just warn and export null if misconfigured
 if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.warn(
+    'Supabase env vars are missing. supabaseAdmin will be null – check Vercel environment variables.',
+  );
 }
 
-export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: {
-    persistSession: false,
-  },
-});
+export const supabaseAdmin =
+  supabaseUrl && serviceRoleKey
+    ? createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+          persistSession: false,
+        },
+      })
+    : null;
