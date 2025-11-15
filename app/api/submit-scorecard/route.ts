@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
     // STEP 1: Get the scorecard (with detailed logging)
     console.log('🔍 Looking up scorecard...');
-    const { data: scorecard, error: scError } = await supabaseAdmin
+    const { data: scorecard, error: scError } = await client
       .from('scorecards')
       .select('id')
       .eq('code', 'apex_b2b_growth_v1')
