@@ -275,12 +275,13 @@ ${weakestDimensions[0].percentage < 30 ? `- Critical gap in ${weakestDimensions[
       cached: false,
     });
 
-  } catch (error: unknown) {
+   } catch (error: unknown) {
     console.error('❌ Chat API error:', error);
     
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    // Get error message for logging
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error details:', errorMsg);  // ✅ NOW USED
     
-    // Intelligent fallback based on common questions
     const message = (error as { message?: string }).message?.toLowerCase() || '';
     
     let fallbackResponse = `I apologize, but I'm experiencing technical difficulties right now. 😔\n\n`;
@@ -296,7 +297,7 @@ ${weakestDimensions[0].percentage < 30 ? `- Critical gap in ${weakestDimensions[
     return NextResponse.json({
       response: fallbackResponse,
       error: true,
-    }, { status: 200 }); // Return 200 so frontend doesn't show error UI
+    }, { status: 200 });
   }
 }
 

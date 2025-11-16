@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Loader, Sparkles, Calendar, Phone, Mail } from 'lucide-react';
+import { MessageCircle, X, Send, Loader, Sparkles, Calendar, Mail } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';

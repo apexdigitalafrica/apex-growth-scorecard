@@ -7,13 +7,10 @@ import {
   TrendingDown,
   Users, 
   Target, 
-  Award, 
   Download,
   RefreshCw,
   Search,
   BarChart3,
-  ArrowUpRight,
-  ArrowDownRight,
   Mail,
   Phone,
   Calendar,
@@ -27,9 +24,10 @@ import {
   Filter,
   FileSpreadsheet,
   Eye,
-  MessageCircle
+  X  // ✅ ADDED
 } from 'lucide-react';
 import AIGrowthChatbot from '@/components/AIGrowthChatbot';
+
 
 // Types & Interfaces
 interface DashboardStats {
