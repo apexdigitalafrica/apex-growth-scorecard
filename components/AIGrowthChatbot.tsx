@@ -122,7 +122,7 @@ What would you like to know?`,
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-transform z-50 flex items-center gap-2 group"
+        className="fixed bottom-6 left-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-transform z-50 flex items-center gap-2 group"
       >
         <Sparkles className="w-5 h-5 animate-pulse" />
         <MessageCircle className="w-6 h-6" />
@@ -134,7 +134,7 @@ What would you like to know?`,
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200">
+    <div className="fixed bottom-6 left-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border-2 border-gray-300">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-t-2xl flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -174,7 +174,7 @@ What would you like to know?`,
               <div className="whitespace-pre-wrap text-sm leading-relaxed">
                 {msg.content}
               </div>
-              <div className={`text-xs mt-1 ${msg.role === 'user' ? 'text-blue-100' : 'text-gray-400'}`}>
+              <div className={`text-xs mt-1 ${msg.role === 'user' ? 'text-blue-200' : 'text-gray-500'}`}>
                 {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
@@ -195,7 +195,7 @@ What would you like to know?`,
       {/* Quick Actions */}
       {messages.length === 1 && (
         <div className="p-3 bg-white border-t border-gray-200">
-          <div className="text-xs text-gray-500 mb-2 font-semibold">Quick actions:</div>
+          <div className="text-xs text-gray-700 mb-2 font-semibold">Quick actions:</div>
           <div className="grid grid-cols-2 gap-2">
             {quickActions.map((action, idx) => (
               <button
@@ -204,10 +204,10 @@ What would you like to know?`,
                   setInput(action.text);
                   sendMessage();
                 }}
-                className="text-xs p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition text-left flex items-center gap-1"
+                className="text-xs p-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition text-left flex items-center gap-1.5 text-gray-900 font-semibold shadow-sm"
               >
-                <span>{action.icon}</span>
-                <span className="truncate">{action.text}</span>
+                <span className="text-base">{action.icon}</span>
+                <span className="truncate text-gray-900">{action.text}</span>
               </button>
             ))}
           </div>
@@ -223,7 +223,7 @@ What would you like to know?`,
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
             placeholder="Ask me anything..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 bg-white placeholder-gray-500"
             disabled={isLoading}
           />
           <button
