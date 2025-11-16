@@ -1,5 +1,6 @@
 'use client';
 import { calculateLeadQuality } from '@/lib/lead-scoring';
+import AIGrowthChatbot from '@/components/AIGrowthChatbot';
 import React, {
   useState,
   useEffect,
@@ -973,6 +974,15 @@ const handleSubmit = async () => {
               {scoreInfo.stage === 'Foundation' &&
                 'Significant opportunities for improvement ahead.'}
             </div>
+			{/* AI Chatbot - appears after results are shown */}
+{showResults && (
+  <AIGrowthChatbot
+    company={company}
+    totalScore={totalScore}
+    stage={scoreInfo.stage}
+    dimensionScores={dimensionScores}
+  />
+)}
           </div>
 		{/* This will be added to your results section, right after the Overall Score section  */}
 
