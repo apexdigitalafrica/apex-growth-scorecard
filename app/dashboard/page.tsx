@@ -1,5 +1,8 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { 
@@ -24,10 +27,11 @@ import {
   Filter,
   FileSpreadsheet,
   Eye,
-  X  // ✅ ADDED
+  X,
+  Lock,  // ✅ ADDED for security badge
+  Shield  // ✅ ADDED for security badge
 } from 'lucide-react';
 import AIGrowthChatbot from '@/components/AIGrowthChatbot';
-
 
 // Types & Interfaces
 interface DashboardStats {
@@ -215,6 +219,23 @@ export default function Dashboard() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse delay-500"></div>
       </div>
+	  
+	  {/* 🔒 ELITE SECURITY BANNER - ADD THIS AT THE TOP */}
+      <div className="relative z-50 bg-gradient-to-r from-green-900/90 via-emerald-900/90 to-green-900/90 backdrop-blur-xl border-b-2 border-green-500/50 shadow-2xl">
+        <div className="max-w-[1600px] mx-auto px-6 py-3">
+          <div className="flex items-center justify-center gap-4 animate-fadeIn">
+            <Shield className="w-6 h-6 text-green-400 animate-pulse" />
+            <div className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-green-300" />
+              <span className="text-green-300 font-bold text-sm tracking-wider uppercase">
+                🔒 SECURE ACCESS • AUTHORIZED PERSONNEL ONLY
+              </span>
+              <Lock className="w-5 h-5 text-green-300" />
+            </div>
+            <Shield className="w-6 h-6 text-green-400 animate-pulse" />
+          </div>
+        </div>
+      </div>
 
       {/* Navigation Bar */}
       <nav className="relative z-10 border-b border-white/10 bg-white/5 backdrop-blur-xl sticky top-0">
@@ -225,18 +246,7 @@ export default function Dashboard() {
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <BarChart3 className="w-6 h-6 text-white" />
                 </div>
-				
-				{/* ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←← */}
-        {/* ADD THIS BLOCK RIGHT HERE — FIRST THING */}
-        <div className="flex items-center justify-center gap-3 mb-8 animate-fadeIn">
-          <Lock className="w-6 h-6 text-green-400 animate-pulse" />
-          <div className="text-green-400 font-bold text-lg tracking-wider">
-            SECURE ACCESS • AUTHORIZED PERSONNEL ONLY
-          </div>
-          <Lock className="w-6 h-6 text-green-400 animate-pulse" />
-        </div>
-        {/* ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←← */}
-                <div>
+		         <div>
                   <div className="text-white font-bold text-lg">Apex Dashboard</div>
                   <div className="text-blue-300 text-xs">Growth Analytics</div>
                 </div>
