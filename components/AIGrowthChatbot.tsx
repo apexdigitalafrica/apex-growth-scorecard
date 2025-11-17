@@ -249,7 +249,7 @@ I'll be back online soon!`,
             <div className="font-bold text-lg">AI Growth Consultant</div>
             <div className="text-xs text-blue-100 flex items-center gap-1">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              Online • Powered by Claude AI
+              Online • Powered by Apex AI Engine
             </div>
           </div>
         </div>
