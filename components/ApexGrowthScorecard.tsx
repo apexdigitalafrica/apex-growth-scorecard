@@ -604,7 +604,7 @@ const dimensions = [
           { text: '3% or higher', points: 25 },
           { text: '1.5-3%', points: 18 },
           { text: '0.5-1.5%', points: 10 },
-          { text: "Under 0.5% or don't know", points: 0 },
+          { text: "Under 0.5% or don&apos;t know", points: 0 },
         ],
       },
       {
@@ -1033,7 +1033,7 @@ const AnimatedScoreDisplay: React.FC<{
         <div className="absolute inset-0 pointer-events-none">
           {[...Array(50)].map((_, index) => (
   <div
-    key={index}  // ✅ Correct: 'index' is the loop variable
+    key={index}  
     className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-confetti"
     style={{
       left: `${Math.random() * 100}%`,
