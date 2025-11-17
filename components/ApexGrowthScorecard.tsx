@@ -1,14 +1,11 @@
 'use client';
 import { Calendar, RefreshCw } from 'lucide-react';
 import { calculateLeadQuality } from '@/lib/lead-scoring';
-//import AIGrowthChatbot from '@/components/AIGrowthChatbot';
-import Image from 'next/image';
-import dynamic from 'next/dynamic';  
+import AIGrowthChatbot from '@/components/AIGrowthChatbot';
 import React, {
   useState,
   useEffect,
   useCallback,
-  useMemo,
   type ReactNode,
   type ChangeEvent,
 } from 'react';
@@ -39,10 +36,7 @@ declare global {
     ) => void;
   }
 }
-const AIGrowthChatbot = dynamic(() => import('@/components/AIGrowthChatbot'), {
-  loading: () => <div className="text-blue-600">Loading AI...</div>,
-  ssr: false
-});
+
 /* --------------------------------------------------------------------------
  * Types
  * -------------------------------------------------------------------------- */
@@ -1171,8 +1165,6 @@ const ApexGrowthScorecard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showIntro, setShowIntro] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [leadQuality, setLeadQuality] = useState<any>(null); // 👈 add this
-
 
   /* ------------------------ Tracking Helper ------------------------ */
   const trackEvent = useCallback(
@@ -1427,16 +1419,13 @@ const ApexGrowthScorecard: React.FC = () => {
 
     try {
       const scores = calculateScores();
+      
+      const leadQuality = calculateLeadQuality(
+        scores.totalScore, 
+        scores.dimensionScores
+      );
 
-const leadQualityResult = calculateLeadQuality(
-  scores.totalScore,
-  scores.dimensionScores
-);
-
-setLeadQuality(leadQualityResult);
-
-console.log('🎯 Lead Quality:', leadQualityResult);
-
+      console.log('🎯 Lead Quality:', leadQuality);
 
       const response = await fetch('/api/submit-scorecard', {
         method: 'POST',
@@ -1475,12 +1464,11 @@ console.log('🎯 Lead Quality:', leadQualityResult);
       });
 
       trackEvent('form_submission_success', { 
-  email, 
-  company,
-  leadPriority: leadQualityResult.priority,
-  leadScore: leadQualityResult.score,
-});
-
+        email, 
+        company,
+        leadPriority: leadQuality.priority,
+        leadScore: leadQuality.score,
+      });
       
       setShowResults(true);
       localStorage.removeItem(SCORECARD_STORAGE_KEY);
@@ -1528,12 +1516,8 @@ console.log('🎯 Lead Quality:', leadQualityResult);
     const scoreInfo = getScoreStage(totalScore);
     const sortedByScore = [...dimensionScores].sort((a, b) => a.percentage - b.percentage);
     const topPriorities = sortedByScore.slice(0, 3);
-   // const recommendations = getRecommendations(sortedByScore);
+    const recommendations = getRecommendations(sortedByScore);
     const weakestDimensions = sortedByScore.slice(0, 3);
-	 const recommendations = useMemo(
-    () => getRecommendations(sortedByScore),
-    [sortedByScore]
-  );
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -1541,13 +1525,15 @@ console.log('🎯 Lead Quality:', leadQualityResult);
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <Image
-  src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
-  alt="Apex Digital Africa"
-  width={64}
-  height={64}
-  className="h-12 sm:h-16 object-contain"
-/>
+              <img
+                src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
+                alt="Apex Digital Africa"
+                className="h-12 sm:h-16 object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
               Your Growth Score
@@ -1601,16 +1587,6 @@ console.log('🎯 Lead Quality:', leadQualityResult);
                   <div className="text-2xl mt-2">/ 100</div>
                 </div>
               </div>
-			{/* Lead Quality Indicator (Only visible to you in dashboard) */}
-{process.env.NODE_ENV === 'development' && (
-  <div className="bg-gray-800 text-white p-4 rounded-lg mb-4">
-    <div className="text-xs font-mono">
-      <div>🎯 Lead Priority: {leadQuality?.priority}</div>
-      <div>📊 Lead Score: {leadQuality?.score}/100</div>
-      <div>🔥 Hot Lead: {leadQuality?.priority === 'High' ? 'Yes' : 'No'}</div>
-    </div>
-  </div>
-)}
 
               {/* Growth Stage */}
               <div className="mb-8">
@@ -1638,13 +1614,11 @@ console.log('🎯 Lead Quality:', leadQualityResult);
                   </div>
                   
                   <div className="text-center">
-                   <Image src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
-  alt="Apex Digital Africa"
-  width={64}
-  height={64}
-  className="h-12 sm:h-16 object-contain"
-  priority
-/>
+                    <img 
+                      src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
+                      alt="Apex Digital Africa"
+                      className="h-12 mb-2 mx-auto"
+                    />
                     <div className="text-sm font-medium text-gray-700">Apex Digital Africa</div>
                     <div className="text-xs text-gray-500">Certified Growth Partner</div>
                   </div>
@@ -1789,9 +1763,8 @@ console.log('🎯 Lead Quality:', leadQualityResult);
 
               <button
                 onClick={() => {
-                  localStorage.removeItem(SCORECARD_STORAGE_KEY);
-				window.location.reload();
-
+                  localStorage.removeItem('scorecard_progress');
+                  window.location.reload();
                 }}
                 className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-xl"
               >
@@ -1948,14 +1921,15 @@ console.log('🎯 Lead Quality:', leadQualityResult);
         <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4">
-              <Image
-  src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
-  alt="Apex Digital Africa"
-  width={64}
-  height={64}
-  className="h-12 sm:h-16 object-contain"
-  priority
-/>
+              <img
+                src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
+                alt="Apex Digital Africa"
+                className="h-10 sm:h-12 object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
             </div>
             <Mail className="w-12 h-12 text-blue-600 mx-auto mb-4" />
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
@@ -2065,14 +2039,15 @@ console.log('🎯 Lead Quality:', leadQualityResult);
         {/* Header with Logo */}
         <div className="text-center mb-8 pt-8">
           <div className="flex justify-center mb-4">
-            <Image
-  src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
-  alt="Apex Digital Africa"
-  width={64}
-  height={64}
-  className="h-12 sm:h-16 object-contain"
-  priority
-/>
+            <img
+              src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
+              alt="Apex Digital Africa"
+              className="h-10 sm:h-12 object-contain"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
             Apex Growth Scorecard™
