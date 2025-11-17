@@ -225,6 +225,17 @@ export default function Dashboard() {
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <BarChart3 className="w-6 h-6 text-white" />
                 </div>
+				
+				{/* ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←← */}
+        {/* ADD THIS BLOCK RIGHT HERE — FIRST THING */}
+        <div className="flex items-center justify-center gap-3 mb-8 animate-fadeIn">
+          <Lock className="w-6 h-6 text-green-400 animate-pulse" />
+          <div className="text-green-400 font-bold text-lg tracking-wider">
+            SECURE ACCESS • AUTHORIZED PERSONNEL ONLY
+          </div>
+          <Lock className="w-6 h-6 text-green-400 animate-pulse" />
+        </div>
+        {/* ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←← */}
                 <div>
                   <div className="text-white font-bold text-lg">Apex Dashboard</div>
                   <div className="text-blue-300 text-xs">Growth Analytics</div>
