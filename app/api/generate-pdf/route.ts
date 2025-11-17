@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     pdf.text('Dimension Breakdown:', 20, 100);
     
     let yPos = 110;
-    dimensionScores.forEach((dim: any) => {
+dimensionScores.forEach((dim: { name: string; percentage: number }) => {
       if (yPos > 270) {
         pdf.addPage();
         yPos = 20;

@@ -2,8 +2,6 @@ import ApexGrowthScorecardWithErrorBoundary from '@/components/ApexGrowthScoreca
 
 export default function ScorecardPage() {
   return (
-    <div className="min-h-screen">
-      <ApexGrowthScorecardWithErrorBoundary />
-    </div>
+    <ApexGrowthScorecardWithErrorBoundary />
   );
 }

@@ -1,11 +1,14 @@
 'use client';
+
 import { Calendar, RefreshCw } from 'lucide-react';
 import { calculateLeadQuality } from '@/lib/lead-scoring';
 import AIGrowthChatbot from '@/components/AIGrowthChatbot';
+import Image from 'next/image';
 import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
   type ChangeEvent,
 } from 'react';
@@ -36,10 +39,9 @@ declare global {
     ) => void;
   }
 }
-
-/* --------------------------------------------------------------------------
- * Types
- * -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* Types */
+/* -------------------------------------------------------------------------- */
 type AnswerValue = number | number[];
 type AnswerMap = Record<string, AnswerValue>;
 
@@ -65,9 +67,13 @@ interface Question {
   dimensionColor: string;
   weight: number;
   helpText?: string;
-  skipLogic?: (answers: AnswerMap) => boolean;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Utility: Error Message Helper */
+/* -------------------------------------------------------------------------- */
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 /* --------------------------------------------------------------------------
  * Utility: Debounce
  * -------------------------------------------------------------------------- */
@@ -83,17 +89,19 @@ const debounce = <T extends unknown[]>(
   };
 };
 
-/* --------------------------------------------------------------------------
- * PDF Generation Utility
- * -------------------------------------------------------------------------- */
-const generatePDF = async (company: string, totalScore: number, stage: string, dimensionScores: DimensionScore[]) => {
+/* -------------------------------------------------------------------------- */
+/* PDF Generation Utility */
+/* -------------------------------------------------------------------------- */
+const generatePDF = async (
+  company: string,
+  totalScore: number,
+  stage: string,
+  dimensionScores: DimensionScore[]
+) => {
   try {
-    // Method 1: Server-side PDF generation (Recommended)
     const response = await fetch('/api/generate-pdf', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         company,
         totalScore,
@@ -116,27 +124,24 @@ const generatePDF = async (company: string, totalScore: number, stage: string, d
       document.body.removeChild(a);
       return true;
     }
-    
-    // Fallback to client-side generation
+
     return await generateClientSidePDF(company, totalScore, stage, dimensionScores);
   } catch (error) {
     console.error('PDF generation failed:', error);
-    // Final fallback - print
     window.print();
     return false;
   }
 };
 
-const generateClientSidePDF = async (company: string, totalScore: number, stage: string, dimensionScores: DimensionScore[]) => {
+const generateClientSidePDF = async (
+  company: string,
+  totalScore: number,
+  stage: string,
+  dimensionScores: DimensionScore[]
+) => {
   try {
-    // Dynamic import to reduce bundle size
     const { jsPDF } = await import('jspdf');
-    
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     // Add branding
     pdf.setFillColor(59, 130, 246);
@@ -160,7 +165,7 @@ const generateClientSidePDF = async (company: string, totalScore: number, stage:
     pdf.text('Dimension Breakdown:', 20, 100);
     
     let yPosition = 110;
-    dimensionScores.forEach((dim, index) => {
+    dimensionScores.forEach((dim) => {
       if (yPosition > 270) {
         pdf.addPage();
         yPosition = 20;
@@ -214,7 +219,7 @@ const generateClientSidePDF = async (company: string, totalScore: number, stage:
       pdf.text(`Generated on ${new Date().toLocaleDateString()} - Page ${i} of ${pageCount}`, 20, 290);
     }
 
-    pdf.save(`Apex-Growth-Scorecard-${company}-${totalScore}.pdf`);
+   pdf.save(`Apex-Growth-Scorecard-${company}-${totalScore}.pdf`);
     return true;
   } catch (error) {
     console.error('Client-side PDF generation failed:', error);
@@ -227,19 +232,19 @@ const getPriorityRecommendations = (percentage: number): string[] => {
     return [
       'Allocate immediate resources to address critical gaps',
       'Conduct comprehensive audit and assessment',
-      'Implement foundational improvements first'
+      'Implement foundational improvements first',
     ];
   } else if (percentage < 70) {
     return [
       'Optimize existing processes and strategies',
       'Test and scale successful initiatives',
-      'Benchmark against industry standards'
+      'Benchmark against industry standards',
     ];
   } else {
     return [
       'Focus on advanced optimization techniques',
       'Explore automation and scaling opportunities',
-      'Share best practices across organization'
+      'Share best practices across organization',
     ];
   }
 };
@@ -323,7 +328,7 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
 
         {/* What You'll Get */}
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 md:p-12 mb-12">
-          <h3 className="text-2xl font-bold text-white mb-8 text-center">What You'll Receive</h3>
+          <h3 className="text-2xl font-bold text-white mb-8 text-center">What You will Receive</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
               '📊 Overall Growth Score (0-100)',
@@ -377,14 +382,15 @@ const IntroScreen: React.FC<{ onStart: () => void }> = ({ onStart }) => {
         <div className="mt-16 text-center">
           <p className="text-blue-300/60 text-sm mb-6">Trusted by 127+ African Businesses</p>
           <div className="flex justify-center items-center gap-8 opacity-60">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className="w-24 h-12 bg-white/5 rounded-lg flex items-center justify-center text-white/40 text-xs font-semibold"
-              >
-                Company {i}
-              </div>
-            ))}
+            {[1, 2, 3, 4, 5].map((num, i) => (  // ✅ Use first param for value
+  <div
+    key={i}
+    className="w-24 h-12 bg-white/5 rounded-lg flex items-center justify-center text-white/40 text-xs font-semibold"
+  >
+    Company {num}  
+  </div>
+))}
+
           </div>
         </div>
       </div>
@@ -663,7 +669,7 @@ const dimensions = [
             text: 'Roughly track spending but not precise CAC',
             points: 10,
           },
-          { text: "Don't track CAC", points: 0 },
+          { text: "Don&apos;t track CAC", points: 0 },
         ],
       },
       {
@@ -1025,18 +1031,18 @@ const AnimatedScoreDisplay: React.FC<{
       {/* Confetti Effect */}
       {showConfetti && (
         <div className="absolute inset-0 pointer-events-none">
-          {[...Array(50)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-confetti"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `-10px`,
-                animationDelay: `${Math.random() * 0.5}s`,
-                animationDuration: `${2 + Math.random() * 2}s`,
-              }}
-            />
-          ))}
+          {[...Array(50)].map((_, index) => (
+  <div
+    key={index}  // ✅ Correct: 'index' is the loop variable
+    className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-confetti"
+    style={{
+      left: `${Math.random() * 100}%`,
+      top: `-10px`,
+      animationDelay: `${Math.random() * 0.5}s`,
+      animationDuration: `${2 + Math.random() * 2}s`,
+    }}
+  />
+))}
         </div>
       )}
 
@@ -1151,9 +1157,8 @@ const AnimatedScoreDisplay: React.FC<{
   );
 };
 
-/* --------------------------------------------------------------------------
- * Main Component
- * -------------------------------------------------------------------------- */
+/* Main Component — FULLY FIXED VERSION */
+/* -------------------------------------------------------------------------- */
 const ApexGrowthScorecard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<AnswerMap>({});
@@ -1166,7 +1171,6 @@ const ApexGrowthScorecard: React.FC = () => {
   const [showIntro, setShowIntro] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  /* ------------------------ Tracking Helper ------------------------ */
   const trackEvent = useCallback(
     (event: string, data: Record<string, unknown> = {}) => {
       if (typeof window !== 'undefined' && window.gtag) {
@@ -1176,40 +1180,37 @@ const ApexGrowthScorecard: React.FC = () => {
     []
   );
 
-  /* ------------------------ Input Sanitization ------------------------ */
   const sanitizeInput = useCallback((input: string | null | undefined): string => {
     if (!input) return '';
     return input.replace(/[<>]/g, '').trim();
   }, []);
-
-  /* ------------------------ Load Saved Progress ------------------------ */
+  
+  /* ------------------------ Load & Save Progress ------------------------ */
   useEffect(() => {
     try {
       const saved = localStorage.getItem(SCORECARD_STORAGE_KEY);
       if (saved) {
-        const {
-          answers: savedAnswers,
-          currentStep: savedStep,
-          email: savedEmail,
-          company: savedCompany,
-        } = JSON.parse(saved) as {
-          answers?: AnswerMap;
-          currentStep?: number;
-          email?: string;
-          company?: string;
-        };
-
-        if (savedAnswers) setAnswers(savedAnswers);
-        if (typeof savedStep === 'number') setCurrentStep(savedStep);
-        if (savedEmail) setEmail(savedEmail);
-        if (savedCompany) setCompany(savedCompany);
+        const parsed = JSON.parse(saved);
+        if (parsed.answers) setAnswers(parsed.answers);
+        if (typeof parsed.currentStep === 'number') setCurrentStep(parsed.currentStep);
+        if (parsed.email) setEmail(parsed.email);
+        if (parsed.company) setCompany(parsed.company);
       }
     } catch (err) {
-      console.error('Error loading saved progress:', err);
+      console.error('Error loading progress:', err);
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      localStorage.setItem(
+        SCORECARD_STORAGE_KEY,
+        JSON.stringify({ answers, currentStep, email, company })
+      );
+    }
+  }, [answers, currentStep, email, company, isLoading]);
 
   /* ------------------------ Save Progress ------------------------ */
   useEffect(() => {
@@ -1296,40 +1297,38 @@ const ApexGrowthScorecard: React.FC = () => {
   );
 
   /* ------------------------ Answer Handler (Debounced, Safe) ------------------------ */
-  const handleAnswer = useCallback(
-    debounce(
-      (questionId: string, points: number, multiSelect: boolean = false) => {
-        setAnswers((prev: AnswerMap) => {
-          if (multiSelect) {
-            const current = (prev[questionId] as number[] | undefined) || [];
-            const exists = current.includes(points);
-            const updated = exists
-              ? current.filter((p) => p !== points)
-              : [...current, points];
-
-            return {
-              ...prev,
-              [questionId]: updated,
-            };
-          }
-
+const handleAnswer = useCallback(
+  debounce(
+    (questionId: string, points: number, multiSelect: boolean = false) => {
+      setAnswers((prev: AnswerMap) => {
+        if (multiSelect) {
+          const current = (prev[questionId] as number[] | undefined) || [];
+          const exists = current.includes(points);
+          const updated = exists
+            ? current.filter((p) => p !== points)
+            : [...current, points];
           return {
             ...prev,
-            [questionId]: points,
+            [questionId]: updated,
           };
-        });
+        }
+        return {
+          ...prev,
+          [questionId]: points,
+        };
+      });
 
-        trackEvent('question_answered', {
-          questionId,
-          action: multiSelect ? 'multi' : 'single',
-          points,
-          multiSelect,
-        });
-      },
-      300
-    ),
-    [trackEvent]
-  );
+      trackEvent('question_answered', {
+        questionId,
+        action: multiSelect ? 'multi' : 'single',
+        points,
+        multiSelect,
+      });
+    },
+    300
+  ),
+  [trackEvent]
+);
 
   /* ------------------------ Navigation ------------------------ */
   const handleNext = () => {
@@ -1351,55 +1350,40 @@ const ApexGrowthScorecard: React.FC = () => {
 
   /* ------------------------ Inputs ------------------------ */
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const sanitized = sanitizeInput(e.target.value);
-    setEmail(sanitized);
-    setError('');
-  };
+  const sanitized = sanitizeInput(e.target.value);
+  setEmail(sanitized);
+  setError('');
+};
 
-  const handleCompanyChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const sanitized = sanitizeInput(e.target.value);
-    setCompany(sanitized);
-  };
-
-  /* ------------------------ PDF Download Handler ------------------------ */
+const handleCompanyChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const sanitized = sanitizeInput(e.target.value);
+  setCompany(sanitized);
+  setError('');
+};
+  /* ------------------------ PDF Download Handler — ------------------------ */
   const handleDownloadPDF = async () => {
     if (!company) return;
-    
+
     setIsGeneratingPDF(true);
     trackEvent('pdf_download_started', { company });
 
     try {
-      const scores = calculateScores();
-      const scoreInfo = getScoreStage(scores.totalScore);
-      
-      const success = await generatePDF(
-        company,
-        scores.totalScore,
-        scoreInfo.stage,
-        scores.dimensionScores
-      );
+      const success = await generatePDF(company, totalScore, scoreInfo.stage, dimensionScores);
 
       if (success) {
-        trackEvent('pdf_download_success', { 
-          company, 
-          score: scores.totalScore 
-        });
+        trackEvent('pdf_download_success', { company, score: totalScore });
       } else {
-        trackEvent('pdf_download_fallback', { 
-          company, 
-          score: scores.totalScore 
-        });
+        trackEvent('pdf_download_fallback', { company, score: totalScore });
       }
     } catch (error) {
       console.error('PDF download failed:', error);
-      trackEvent('pdf_download_error', { error: error.message });
-      // Fallback to print
+      const errorMessage = getErrorMessage(error);
+      trackEvent('pdf_download_error', { error: errorMessage });
       window.print();
     } finally {
       setIsGeneratingPDF(false);
     }
   };
-
   /* ------------------------ Submit ------------------------ */
   const handleSubmit = async () => {
     if (!email || !company) {
@@ -1484,436 +1468,441 @@ const ApexGrowthScorecard: React.FC = () => {
     }
   };
 
-  /* ------------------------ Derived UI State ------------------------ */
-  const currentQuestion = allQuestions[currentStep];
-  const progress = ((currentStep + 1) / allQuestions.length) * 100;
-  const isAnswered =
-    currentQuestion &&
-    (currentQuestion.multiSelect
-      ? ((answers[currentQuestion.id] as number[] | undefined) ?? []).length > 0
-      : answers[currentQuestion.id] !== undefined);
 
-  /* ------------------------ Loading ------------------------ */
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading your progress...</p>
-        </div>
+/* ------------------------ Derived UI State ------------------------ */
+const currentQuestion = allQuestions[currentStep];
+const progress = ((currentStep + 1) / allQuestions.length) * 100;
+const isAnswered =
+  currentQuestion &&
+  (currentQuestion.multiSelect
+    ? ((answers[currentQuestion.id] as number[] | undefined) ?? []).length > 0
+    : answers[currentQuestion.id] !== undefined);
+
+/* ------------------------ Derived Scores & Recommendations (MUST be unconditional) ------------------------ */
+const { dimensionScores, totalScore } = calculateScores();
+const scoreInfo = getScoreStage(totalScore);
+const sortedByScore = useMemo(
+  () => [...dimensionScores].sort((a, b) => a.percentage - b.percentage),
+  [dimensionScores]
+);
+const topPriorities = useMemo(() => sortedByScore.slice(0, 3), [sortedByScore]);
+const recommendations = useMemo(
+  () => getRecommendations(sortedByScore),
+  [sortedByScore, getRecommendations]
+);
+const weakestDimensions = useMemo(() => sortedByScore.slice(0, 3), [sortedByScore]);
+
+/* ------------------------ Loading ------------------------ */
+if (isLoading) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="text-center">
+        <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+        <p className="text-gray-600">Loading your progress...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  /* ------------------------ Intro Screen ------------------------ */
-  if (showIntro) {
-    return <IntroScreen onStart={() => setShowIntro(false)} />;
-  }
+/* ------------------------ Intro Screen ------------------------ */
+if (showIntro) {
+  return <IntroScreen onStart={() => setShowIntro(false)} />;
+}
 
-  /* ------------------------ Results View ------------------------ */
-  if (showResults) {
-    const { dimensionScores, totalScore } = calculateScores();
-    const scoreInfo = getScoreStage(totalScore);
-    const sortedByScore = [...dimensionScores].sort((a, b) => a.percentage - b.percentage);
-    const topPriorities = sortedByScore.slice(0, 3);
-    const recommendations = getRecommendations(sortedByScore);
-    const weakestDimensions = sortedByScore.slice(0, 3);
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-8 my-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <img
-                src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
-                alt="Apex Digital Africa"
-                className="h-12 sm:h-16 object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-              Your Growth Score
-            </h1>
-            <p className="text-gray-600">Comprehensive analysis for {company}</p>
+/* ------------------------ Results View ------------------------ */
+if (showResults) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-8 my-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <Image
+              src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
+              alt="Apex Digital Africa"
+              width={64}
+              height={64}
+              className="h-12 sm:h-16 w-auto object-contain"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
           </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+            Your Growth Score
+          </h1>
+          <p className="text-gray-600">Comprehensive analysis for {company}</p>
+        </div>
 
-          {/* Animated Score Display */}
-          <AnimatedScoreDisplay
-            totalScore={totalScore}
+        {/* Animated Score Display */}
+        <AnimatedScoreDisplay
+          totalScore={totalScore}
+          stage={scoreInfo.stage}
+          companyName={company}
+        />
+
+        {/* Social Sharing */}
+        <div className="mb-8">
+          <SocialShareButtons
+            score={totalScore}
             stage={scoreInfo.stage}
             companyName={company}
           />
+        </div>
 
-          {/* Social Sharing */}
-          <div className="mb-8">
-            <SocialShareButtons
-              score={totalScore}
-              stage={scoreInfo.stage}
-              companyName={company}
-            />
-          </div>
-
-          {/* Premium Certificate Section */}
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-blue-200 mb-8">
-            {/* Certificate Header */}
-            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-8 px-12 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-20"></div>
-              <div className="relative z-10">
-                <Award className="w-16 h-16 mx-auto mb-4 text-yellow-300" />
-                <h2 className="text-3xl font-bold mb-2">Digital Growth Certificate</h2>
-                <p className="text-blue-100">Verified Achievement • Apex Digital Africa</p>
-              </div>
-            </div>
-
-            {/* Certificate Body */}
-            <div className="p-12 text-center">
-              <div className="mb-8">
-                <p className="text-gray-600 text-lg mb-4">This certifies that</p>
-                <h3 className="text-4xl font-bold text-gray-900 mb-2">{company}</h3>
-                <p className="text-gray-600 text-lg mb-8">
-                  has completed the Apex Growth Scorecard™ assessment
-                </p>
-              </div>
-
-              {/* Score Badge */}
-              <div className="inline-block mb-8">
-                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white px-12 py-6 rounded-2xl shadow-xl">
-                  <div className="text-sm font-semibold mb-2">Achieved Score</div>
-                  <div className="text-6xl font-bold">{totalScore}</div>
-                  <div className="text-2xl mt-2">/ 100</div>
-                </div>
-              </div>
-
-              {/* Growth Stage */}
-              <div className="mb-8">
-                <div className="inline-flex items-center gap-3 bg-gradient-to-r from-purple-100 to-pink-100 px-8 py-4 rounded-full border-2 border-purple-300">
-                  <TrendingUp className="w-6 h-6 text-purple-600" />
-                  <div>
-                    <div className="text-sm text-purple-600 font-medium">Growth Stage</div>
-                    <div className="text-xl font-bold text-purple-900">{scoreInfo.stage}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Date & Signature */}
-              <div className="border-t-2 border-gray-200 pt-8">
-                <div className="flex justify-between items-end max-w-2xl mx-auto">
-                  <div className="text-left">
-                    <div className="text-sm text-gray-500 mb-2">Date of Assessment</div>
-                    <div className="font-semibold text-gray-900">
-                      {new Date().toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </div>
-                  </div>
-                  
-                  <div className="text-center">
-                    <img 
-                      src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
-                      alt="Apex Digital Africa"
-                      className="h-12 mb-2 mx-auto"
-                    />
-                    <div className="text-sm font-medium text-gray-700">Apex Digital Africa</div>
-                    <div className="text-xs text-gray-500">Certified Growth Partner</div>
-                  </div>
-
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500 mb-2">Certificate ID</div>
-                    <div className="font-mono text-xs text-gray-700 bg-gray-100 px-3 py-1 rounded">
-                      AD-{Date.now().toString(36).toUpperCase()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Certificate Footer Actions */}
-            <div className="bg-gray-50 px-12 py-6 flex flex-wrap gap-4 justify-center border-t-2 border-gray-200">
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                Print Certificate
-              </button>
-
-              <button
-                onClick={handleDownloadPDF}
-                disabled={isGeneratingPDF}
-                className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isGeneratingPDF ? (
-                  <>
-                    <Loader className="w-5 h-5 animate-spin" />
-                    <span>Generating PDF...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Download PDF
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={() => {
-                  const shareUrl = window.location.href;
-                  navigator.clipboard.writeText(shareUrl);
-                  alert('✅ Certificate link copied!');
-                }}
-                className="flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                </svg>
-                Share Link
-              </button>
-            </div>
-
-            {/* Verification Section */}
-            <div className="bg-gray-50 rounded-xl p-4 text-center border-2 border-gray-200 m-4">
-              <p className="text-xs text-gray-600 font-semibold">Certificate ID: APEX-{new Date().getFullYear()}-{Math.random().toString(36).substr(2, 6).toUpperCase()}</p>
-              <p className="text-[10px] text-gray-500 mt-1">Digitally verified and permanently stored</p>
+        {/* Premium Certificate Section */}
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-blue-200 mb-8">
+          {/* Certificate Header */}
+          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-8 px-12 text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-20"></div>
+            <div className="relative z-10">
+              <Award className="w-16 h-16 mx-auto mb-4 text-yellow-300" />
+              <h2 className="text-3xl font-bold mb-2">Digital Growth Certificate</h2>
+              <p className="text-blue-100">Verified Achievement • Apex Digital Africa</p>
             </div>
           </div>
 
-          {/* Personalized Next Steps */}
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-10 border-2 border-indigo-200 mb-8">
-            <div className="text-center mb-10">
-              <h3 className="text-3xl font-bold text-gray-900 mb-3 flex items-center justify-center gap-3">
-                <Rocket className="w-8 h-8 text-indigo-600" />
-                Your Personalized Growth Roadmap
-              </h3>
-              <p className="text-lg text-gray-600">
-                Based on your {totalScore}/100 score, here's what we recommend:
+          {/* Certificate Body */}
+          <div className="p-12 text-center">
+            <div className="mb-8">
+              <p className="text-gray-600 text-lg mb-4">This certifies that</p>
+              <h3 className="text-4xl font-bold text-gray-900 mb-2">{company}</h3>
+              <p className="text-gray-600 text-lg mb-8">
+                has completed the Apex Growth Scorecard™ assessment
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              {[
-                {
-                  priority: 'Immediate (This Week)',
-                  icon: '🔥',
-                  color: 'red',
-                  actions: [
-                    weakestDimensions[0] && `Focus on ${weakestDimensions[0].name} (currently at ${weakestDimensions[0].percentage}%)`,
-                    'Book a free 30-min strategy call',
-                    'Review automated recommendations'
-                  ]
-                },
-                {
-                  priority: 'Short-term (This Month)',
-                  icon: '📈',
-                  color: 'yellow',
-                  actions: [
-                    'Implement quick wins from assessment',
-                    'Set up tracking metrics',
-                    'Optimize weakest dimension'
-                  ]
-                },
-                {
-                  priority: 'Long-term (3 Months)',
-                  icon: '🎯',
-                  color: 'green',
-                  actions: [
-                    'Achieve 70+ overall score',
-                    'Build comprehensive strategy',
-                    'Retake assessment to track progress'
-                  ]
-                }
-              ].map((step, idx) => (
-                <div key={idx} className={`bg-white rounded-2xl p-6 border-2 border-${step.color}-200 shadow-lg`}>
-                  <div className="text-4xl mb-3">{step.icon}</div>
-                  <h4 className="font-bold text-lg text-gray-900 mb-4">{step.priority}</h4>
-                  <ul className="space-y-2">
-                    {step.actions.map((action, i) => (
-                      action && (
-                        <li key={i} className="flex items-start gap-2">
-                          <CheckCircle className={`w-5 h-5 text-${step.color}-500 flex-shrink-0 mt-0.5`} />
-                          <span className="text-sm text-gray-700">{action}</span>
-                        </li>
-                      )
-                    ))}
-                  </ul>
-                </div>
-              ))}
+            {/* Score Badge */}
+            <div className="inline-block mb-8">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white px-12 py-6 rounded-2xl shadow-xl">
+                <div className="text-sm font-semibold mb-2">Achieved Score</div>
+                <div className="text-6xl font-bold">{totalScore}</div>
+                <div className="text-2xl mt-2">/ 100</div>
+              </div>
             </div>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="https://bit.ly/africa-website"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-xl"
-              >
-                <Calendar className="w-6 h-6" />
-                Book Free Strategy Session
-              </a>
+            {/* Growth Stage */}
+            <div className="mb-8">
+              <div className="inline-flex items-center gap-3 bg-gradient-to-r from-purple-100 to-pink-100 px-8 py-4 rounded-full border-2 border-purple-300">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
+                <div>
+                  <div className="text-sm text-purple-600 font-medium">Growth Stage</div>
+                  <div className="text-xl font-bold text-purple-900">{scoreInfo.stage}</div>
+                </div>
+              </div>
+            </div>
 
-              <button
-                onClick={() => {
-                  localStorage.removeItem('scorecard_progress');
-                  window.location.reload();
-                }}
-                className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-xl"
-              >
-                <RefreshCw className="w-6 h-6" />
-                Retake Assessment
-              </button>
+            {/* Date & Signature */}
+            <div className="border-t-2 border-gray-200 pt-8">
+              <div className="flex justify-between items-end max-w-2xl mx-auto">
+                <div className="text-left">
+                  <div className="text-sm text-gray-500 mb-2">Date of Assessment</div>
+                  <div className="font-semibold text-gray-900">
+                    {new Date().toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <Image
+                    src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
+                    alt="Apex Digital Africa"
+                    className="h-12 mb-2 mx-auto"
+                    width={120}
+                    height={48}
+                  />
+                  <div className="text-sm font-medium text-gray-700">Apex Digital Africa</div>
+                  <div className="text-xs text-gray-500">Certified Growth Partner</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-500 mb-2">Certificate ID</div>
+                  <div className="font-mono text-xs text-gray-700 bg-gray-100 px-3 py-1 rounded">
+                    AD-{Date.now().toString(36).toUpperCase()}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Dimension Breakdown */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Dimension Breakdown
-            </h2>
-            <div className="space-y-4">
-              {dimensionScores.map((dim, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-gray-900">
-                      {dim.name}
-                    </span>
-                    <span className="font-bold text-lg">
-                      {dim.percentage}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className={`${dim.color} h-3 rounded-full transition-all duration-500`}
-                      style={{ width: `${dim.percentage}%` }}
-                    />
-                  </div>
-                  <div className="mt-1 text-sm text-gray-600">
-                    Weight: {Math.round(dim.weight * 100)}% | Contribution:{' '}
-                    {Math.round(dim.weightedScore)} points
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Certificate Footer Actions */}
+          <div className="bg-gray-50 px-12 py-6 flex flex-wrap gap-4 justify-center border-t-2 border-gray-200">
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Print Certificate
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isGeneratingPDF}
+              className="flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGeneratingPDF ? (
+                <>
+                  <Loader className="w-5 h-5 animate-spin" />
+                  <span>Generating PDF...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Download PDF
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                const shareUrl = window.location.href;
+                navigator.clipboard.writeText(shareUrl);
+                alert('✅ Certificate link copied!');
+              }}
+              className="flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold transition-all transform hover:scale-105 shadow-lg"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Share Link
+            </button>
           </div>
 
-          {/* Recommendations (Weakest Dimensions) */}
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-              <Target className="mr-2 text-blue-600" />
-              Actionable Recommendations
-            </h2>
-            <div className="space-y-4">
-              {recommendations.slice(0, 3).map((rec, index) => (
-                <div
-                  key={index}
-                  className="bg-white rounded-lg p-4 border-l-4 border-blue-500"
-                >
-                  <div className="font-semibold text-gray-900 mb-2">
-                    {rec.name} ({rec.percentage}%)
-                  </div>
-                  <ul className="text-sm text-gray-700 space-y-1">
-                    {rec.recommendations.slice(0, 2).map((recommendation, i) => (
-                      <li key={i} className="flex items-start">
-                        <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                        {recommendation}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Top Priorities */}
-          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-              <AlertTriangle className="mr-2 text-yellow-600" />
-              Top 3 Priorities
-            </h2>
-            <div className="space-y-4">
-              {topPriorities.map((priority, index) => (
-                <div
-                  key={index}
-                  className="bg-white rounded-lg p-4 border-l-4 border-yellow-500"
-                >
-                  <div className="font-semibold text-gray-900 mb-1">
-                    {index + 1}. {priority.name} ({priority.percentage}%)
-                  </div>
-                  <div className="text-sm text-gray-700">
-                    {priority.percentage < 40 &&
-                      'Critical gaps requiring immediate attention'}
-                    {priority.percentage >= 40 &&
-                      priority.percentage < 60 &&
-                      'Needs optimization for better performance'}
-                    {priority.percentage >= 60 &&
-                      'Good foundation, refine for excellence'}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* CTA Section */}
-          <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl p-6 sm:p-8 text-white text-center">
-            <h3 className="text-2xl font-bold mb-4">
-              Ready to Improve Your Score?
-            </h3>
-            <p className="mb-6 text-blue-100">
-              Book a free 30-minute strategy session to discuss your results and
-              create a custom 90-day growth plan.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a
-                href="https://bit.ly/africa-website"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white text-indigo-600 px-6 sm:px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition text-center"
-                onClick={() =>
-                  trackEvent('cta_click', { type: 'strategy_session' })
-                }
-              >
-                Book Strategy Session
-              </a>
-              <button
-                onClick={handleDownloadPDF}
-                disabled={isGeneratingPDF}
-                className="bg-indigo-700 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold hover:bg-indigo-800 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isGeneratingPDF ? (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin" />
-                    Generating PDF...
-                  </>
-                ) : (
-                  'Download Full Report (PDF)'
-                )}
-              </button>
-            </div>
+          {/* Verification Section */}
+          <div className="bg-gray-50 rounded-xl p-4 text-center border-2 border-gray-200 m-4">
+            <p className="text-xs text-gray-600 font-semibold">Certificate ID: APEX-{new Date().getFullYear()}-{Math.random().toString(36).substr(2, 6).toUpperCase()}</p>
+            <p className="text-[10px] text-gray-500 mt-1">Digitally verified and permanently stored</p>
           </div>
         </div>
 
-        {/* AI Chatbot */}
-        {showResults && (
-          <AIGrowthChatbot
-            company={company}
-            totalScore={totalScore}
-            stage={scoreInfo.stage}
-            dimensionScores={dimensionScores}
-          />
-        )}
-      </div>
-    );
-  }
+        {/* Personalized Next Steps */}
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-10 border-2 border-indigo-200 mb-8">
+          <div className="text-center mb-10">
+            <h3 className="text-3xl font-bold text-gray-900 mb-3 flex items-center justify-center gap-3">
+              <Rocket className="w-8 h-8 text-indigo-600" />
+              Your Personalized Growth Roadmap
+            </h3>
+            <p className="text-lg text-gray-600">
+  Based on your {totalScore}/100 score, here&apos;s what we recommend:
+</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            {[
+              {
+                priority: 'Immediate (This Week)',
+                icon: '🔥',
+                color: 'red',
+                actions: [
+                  weakestDimensions[0] && `Focus on ${weakestDimensions[0].name} (currently at ${weakestDimensions[0].percentage}%)`,
+                  'Book a free 30-min strategy call',
+                  'Review automated recommendations'
+                ]
+              },
+              {
+                priority: 'Short-term (This Month)',
+                icon: '📈',
+                color: 'yellow',
+                actions: [
+                  'Implement quick wins from assessment',
+                  'Set up tracking metrics',
+                  'Optimize weakest dimension'
+                ]
+              },
+              {
+                priority: 'Long-term (3 Months)',
+                icon: '🎯',
+                color: 'green',
+                actions: [
+                  'Achieve 70+ overall score',
+                  'Build comprehensive strategy',
+                  'Retake assessment to track progress'
+                ]
+              }
+            ].map((step, idx) => (
+              <div key={idx} className={`bg-white rounded-2xl p-6 border-2 border-${step.color}-200 shadow-lg`}>
+                <div className="text-4xl mb-3">{step.icon}</div>
+                <h4 className="font-bold text-lg text-gray-900 mb-4">{step.priority}</h4>
+                <ul className="space-y-2">
+                  {step.actions.map((action, i) => (
+  action && (
+    <li key={i} className="flex items-start gap-2">
+      <CheckCircle className={`w-5 h-5 text-${step.color}-500 flex-shrink-0 mt-0.5`} />
+      <span className="text-sm text-gray-700">{action}</span>
+    </li>
+  )
+))}
 
+                </ul>
+              </div>
+            ))}
+          </div>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="https://bit.ly/africa-website"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-xl"
+            >
+              <Calendar className="w-6 h-6" />
+              Book Free Strategy Session
+            </a>
+            <button
+              onClick={() => {
+                localStorage.removeItem('scorecard_progress');
+                window.location.reload();
+              }}
+              className="flex items-center justify-center gap-2 px-8 py-4 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-xl"
+            >
+              <RefreshCw className="w-6 h-6" />
+              Retake Assessment
+            </button>
+          </div>
+        </div>
+
+        {/* Dimension Breakdown */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Dimension Breakdown
+          </h2>
+          <div className="space-y-4">
+            {dimensionScores.map((dim, index) => (
+              <div key={index} className="border rounded-lg p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold text-gray-900">
+                    {dim.name}
+                  </span>
+                  <span className="font-bold text-lg">
+                    {dim.percentage}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div
+                    className={`${dim.color} h-3 rounded-full transition-all duration-500`}
+                    style={{ width: `${dim.percentage}%` }}
+                  />
+                </div>
+                <div className="mt-1 text-sm text-gray-600">
+                  Weight: {Math.round(dim.weight * 100)}% | Contribution:{' '}
+                  {Math.round(dim.weightedScore)} points
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ✅ FIXED: Recommendations Section */}
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+            <Target className="mr-2 text-blue-600" />
+            Actionable Recommendations
+          </h2>
+          <div className="space-y-4">
+            {recommendations.slice(0, 3).map((rec, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-lg p-4 border-l-4 border-blue-500"
+              >
+                <div className="font-semibold text-gray-900 mb-2">
+                  {rec.name} ({rec.percentage}%)
+                </div>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  {rec.recommendations.slice(0, 2).map((recommendation, i) => (
+                    <li key={i} className="flex items-start">
+                      <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                      {recommendation}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top Priorities */}
+        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+            <AlertTriangle className="mr-2 text-yellow-600" />
+            Top 3 Priorities
+          </h2>
+          <div className="space-y-4">
+            {topPriorities.map((priority, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-lg p-4 border-l-4 border-yellow-500"
+              >
+                <div className="font-semibold text-gray-900 mb-1">
+                  {index + 1}. {priority.name} ({priority.percentage}%)
+                </div>
+                <div className="text-sm text-gray-700">
+                  {priority.percentage < 40 &&
+                    'Critical gaps requiring immediate attention'}
+                  {priority.percentage >= 40 &&
+                    priority.percentage < 60 &&
+                    'Needs optimization for better performance'}
+                  {priority.percentage >= 60 &&
+                    'Good foundation, refine for excellence'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* CTA Section */}
+        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl p-6 sm:p-8 text-white text-center">
+          <h3 className="text-2xl font-bold mb-4">
+            Ready to Improve Your Score?
+          </h3>
+          <p className="mb-6 text-blue-100">
+            Book a free 30-minute strategy session to discuss your results and
+            create a custom 90-day growth plan.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="https://bit.ly/africa-website"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white text-indigo-600 px-6 sm:px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition text-center"
+              onClick={() =>
+                trackEvent('cta_click', { type: 'strategy_session' })
+              }
+            >
+              Book Strategy Session
+            </a>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isGeneratingPDF}
+              className="bg-indigo-700 text-white px-6 sm:px-8 py-3 rounded-lg font-semibold hover:bg-indigo-800 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isGeneratingPDF ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Generating PDF...
+                </>
+              ) : (
+                'Download Full Report (PDF)'
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Chatbot */}
+      {showResults && (
+        <AIGrowthChatbot
+          company={company}
+          totalScore={totalScore}
+          stage={scoreInfo.stage}
+          dimensionScores={dimensionScores}
+        />
+      )}
+    </div>
+  );
+}
   /* ------------------------ Email Collection View ------------------------ */
   if (currentStep === allQuestions.length) {
     return (
@@ -1921,15 +1910,17 @@ const ApexGrowthScorecard: React.FC = () => {
         <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-6 sm:p-8">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4">
-              <img
-                src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
-                alt="Apex Digital Africa"
-                className="h-10 sm:h-12 object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
+              <Image
+  src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
+  alt="Apex Digital Africa"
+  className="h-10 sm:h-12 object-contain"
+  width={120}
+  height={48}
+  onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    target.style.display = 'none';
+  }}
+/>
             </div>
             <Mail className="w-12 h-12 text-blue-600 mx-auto mb-4" />
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
@@ -2039,15 +2030,17 @@ const ApexGrowthScorecard: React.FC = () => {
         {/* Header with Logo */}
         <div className="text-center mb-8 pt-8">
           <div className="flex justify-center mb-4">
-            <img
-              src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
-              alt="Apex Digital Africa"
-              className="h-10 sm:h-12 object-contain"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
-            />
+           <Image
+  src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png"
+  alt="Apex Digital Africa"
+  className="h-10 sm:h-12 object-contain"
+  width={120}
+  height={40}
+  onError={(e) => {
+    const target = e.target as HTMLImageElement;
+    target.style.display = 'none';
+  }}
+/>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
             Apex Growth Scorecard™
@@ -2266,57 +2259,37 @@ const ApexGrowthScorecard: React.FC = () => {
     </div>
   );
 };
-
-/* --------------------------------------------------------------------------
- * Error Boundary Wrapper
- * -------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* Error Boundary */
+/* -------------------------------------------------------------------------- */
 class ScorecardErrorBoundary extends React.Component<
   { children: ReactNode },
   { hasError: boolean; error: Error | null }
 > {
-  constructor(props: { children: ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
+  state = { hasError: false, error: null };
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Scorecard Error Boundary caught:', error, errorInfo);
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('ErrorBoundary:', error, info);
   }
-
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md text-center">
-            <div className="text-red-500 text-5xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Oops! Something went wrong
-            </h2>
-            <p className="text-gray-600 mb-6">
-              {this.state.error?.message || 'An unexpected error occurred'}
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
-            >
+        <div className="min-h-screen bg-red-50 flex items-center justify-center">
+          <div className="bg-white p-8 rounded-xl shadow-lg text-center">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
+            <button onClick={() => window.location.reload()} className="bg-blue-600 text-white px-6 py-3 rounded-lg">
               Reload Page
             </button>
           </div>
         </div>
       );
     }
-
     return this.props.children;
   }
 }
 
-/* --------------------------------------------------------------------------
- * Export with Error Boundary
- * -------------------------------------------------------------------------- */
 const ApexGrowthScorecardWithErrorBoundary: React.FC = () => (
   <ScorecardErrorBoundary>
     <ApexGrowthScorecard />

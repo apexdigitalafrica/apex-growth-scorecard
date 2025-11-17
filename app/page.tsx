@@ -1,6 +1,6 @@
 // app/page.tsx
 'use client';
-
+import Image from 'next/image';
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
 import { 
@@ -93,11 +93,13 @@ export default function Home() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3 group">
               <div className="relative">
-                <img 
-                  src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png" 
-                  alt="Apex Digital Africa" 
-                  className="h-10 w-auto transform group-hover:scale-110 transition-transform duration-300"
-                />
+                <Image
+  src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png" 
+  alt="Apex Digital Africa" 
+  width={40}
+  height={40}
+  className="h-10 w-auto transform group-hover:scale-110 transition-transform duration-300"
+/>
                 <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-sm group-hover:blur-md transition-all"></div>
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
@@ -463,11 +465,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-6 md:space-y-0">
             <div className="flex items-center space-x-3">
-              <img 
-                src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png" 
-                alt="Apex Digital Africa" 
-                className="h-8 w-auto"
-              />
+              <Image
+  src="https://apexdigitalafrica.com/wp-content/uploads/2025/09/cropped-cropped-apex-_logo.png" 
+  alt="Apex Digital Africa" 
+  width={32}
+  height={32}
+  className="h-8 w-auto"
+/>
               <span className="text-blue-200/80">© 2025 Apex Digital Africa. All rights reserved.</span>
             </div>
             <div className="flex items-center space-x-8 text-sm text-blue-200/60">
