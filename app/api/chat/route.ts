@@ -1,14 +1,15 @@
 // app/api/chat/route.ts
+// app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 export const preferredRegion = 'iad1';
 
 export async function POST(request: NextRequest) {
-  const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+  const ANTHROPIC_API_KEY = process.env.apex_scorecard_api_key;  
 
   if (!ANTHROPIC_API_KEY) {
-    console.error('❌ ANTHROPIC_API_KEY not found in environment');
+    console.error('❌ apex_scorecard_api_key not found in environment');
     return NextResponse.json(
       { 
         response: "I apologize, but I'm temporarily unavailable. Please email us at info@apexdigitalafrica.com or try again in a moment." 
@@ -20,7 +21,6 @@ export async function POST(request: NextRequest) {
   try {
     const { message, context } = await request.json();
 
-    // Build rich context for Claude
     const contextString = context
       ? `Company: ${context.company || 'Unknown'}
 Score: ${context.totalScore || 'N/A'}/100 (${context.stage || 'Unknown'})
@@ -48,7 +48,7 @@ Mode: ${context.mode || 'scorecard'}`
       },
       body: JSON.stringify({
         model: 'claude-3-haiku-20240307',
-        max_tokens: 1024,  // ✅ Increased for better responses
+        max_tokens: 1024,
         temperature: 0.7,
         system: `You are an expert AI Growth Consultant for Apex Digital Africa. 
 
@@ -78,7 +78,6 @@ When users share their scorecard results, focus on:
       const errorText = await response.text();
       console.error('❌ Anthropic API error:', response.status, errorText);
       
-      // Better error messages
       if (response.status === 401) {
         throw new Error('Invalid API key');
       } else if (response.status === 429) {
@@ -98,7 +97,6 @@ When users share their scorecard results, focus on:
   } catch (error) {
     console.error('💥 Chat API error:', error);
     
-    // Graceful fallback
     return NextResponse.json(
       {
         response: "I'm having trouble connecting right now. 😔\n\nWhile I get back online, you can:\n📧 Email: hello@apexdigitalafrica@apexdigitalafrica.com\n📞 WhatsApp: +1(555)8900637\n📅 Book a call: https://calendly.com/apexdigitalafrica\n\nI'll be back shortly!"
@@ -107,3 +105,5 @@ When users share their scorecard results, focus on:
     );
   }
 }
+
+    
