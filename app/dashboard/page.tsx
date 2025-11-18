@@ -272,38 +272,38 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      <div className="relative z-10 max-w-[1600px] mx-auto p-6 lg:p-8">
+   <div className="relative z-10 max-w-[1600px] mx-auto p-6 lg:p-8">
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    {/* Growth Scorecard Overview */}
+    <Link
+      href="/scorecard"
+      className="group bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border-2 border-emerald-500/30 rounded-2xl p-6 hover:border-emerald-500 transition-all hover:scale-105"
+    >
+      <Award className="w-10 h-10 text-emerald-400 mb-3" />
+      <h3 className="text-xl font-bold text-white mb-2">Growth Scorecard</h3>
+      <p className="text-slate-400 mb-4">
+        Individual digital maturity assessments
+      </p>
+      <div className="flex items-center text-emerald-400 font-semibold">
+        View Submissions <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+      </div>
+    </Link>
 
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-  {/* Growth Scorecard Overview */}
-  <Link
-    href="/scorecard" ...
-    className="group bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border-2 border-emerald-500/30 rounded-2xl p-6 hover:border-emerald-500 transition-all hover:scale-105"
-  >
-    <Award className="w-10 h-10 text-emerald-400 mb-3" />
-    <h3 className="text-xl font-bold text-white mb-2">Growth Scorecard</h3>
-    <p className="text-slate-400 mb-4">
-      Individual digital maturity assessments
-    </p>
-    <div className="flex items-center text-emerald-400 font-semibold">
-      View Submissions <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-    </div>
-  </Link>
-
-  {/* Funnel Analysis Tool */}
-  <Link
-    href="/funnel-analysis" ...
-    className="group bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500 transition-all hover:scale-105"
-  >
-    <BarChart3 className="w-10 h-10 text-blue-400 mb-3" />
-    <h3 className="text-xl font-bold text-white mb-2">Funnel Analysis</h3>
-    <p className="text-slate-400 mb-4">
-      Business funnel diagnostics & revenue recovery
-    </p>
-    <div className="flex items-center text-blue-400 font-semibold">
-      Analyze Funnels <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-    </div>
-  </Link>
+    {/* Funnel Analysis Tool */}
+    <Link
+      href="/funnel-analysis"
+      className="group bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500 transition-all hover:scale-105"
+    >
+      <BarChart3 className="w-10 h-10 text-blue-400 mb-3" />
+      <h3 className="text-xl font-bold text-white mb-2">Funnel Analysis</h3>
+      <p className="text-slate-400 mb-4">
+        Business funnel diagnostics & revenue recovery
+      </p>
+      <div className="flex items-center text-blue-400 font-semibold">
+        Analyze Funnels <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+      </div>
+    </Link>
+  </div>
 </div>
         
         {/* Header Section with Glassmorphism */}
