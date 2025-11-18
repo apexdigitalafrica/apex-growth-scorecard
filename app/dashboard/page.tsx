@@ -273,12 +273,11 @@ export default function Dashboard() {
       </nav>
 
       <div className="relative z-10 max-w-[1600px] mx-auto p-6 lg:p-8">
-	  // Add a new tab/section for Funnel Analysis
 
 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
   {/* Growth Scorecard Overview */}
   <Link
-    href="/dashboard/growth-scorecard"
+    href="/scorecard" ...
     className="group bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border-2 border-emerald-500/30 rounded-2xl p-6 hover:border-emerald-500 transition-all hover:scale-105"
   >
     <Award className="w-10 h-10 text-emerald-400 mb-3" />
@@ -293,7 +292,7 @@ export default function Dashboard() {
 
   {/* Funnel Analysis Tool */}
   <Link
-    href="/dashboard/funnel-analysis"
+    href="/funnel-analysis" ...
     className="group bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500 transition-all hover:scale-105"
   >
     <BarChart3 className="w-10 h-10 text-blue-400 mb-3" />
