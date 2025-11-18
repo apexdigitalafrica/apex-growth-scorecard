@@ -594,5 +594,662 @@ img {
     animation: scaleIn 0.3s ease-out;
   }
 `}</style>
+/* ===== RESPONSIVE FIXES FOR HOMEPAGE ===== */
+
+/* Mobile-specific fixes */
+@media (max-width: 768px) {
+  /* Hero text sizing */
+  .text-6xl {
+    font-size: 2.5rem !important;
+  }
+  
+  .text-8xl {
+    font-size: 3rem !important;
+  }
+  
+  .text-xl {
+    font-size: 1rem !important;
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem !important;
+  }
+
+  /* Padding adjustments */
+  .py-20 {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+  }
+  
+  .py-32 {
+    padding-top: 4rem !important;
+    padding-bottom: 4rem !important;
+  }
+
+  /* Button sizing */
+  .px-12 {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+  
+  .py-5 {
+    padding-top: 0.875rem !important;
+    padding-bottom: 0.875rem !important;
+  }
+
+  /* Stats grid - stack on mobile */
+  .grid-cols-1.md\:grid-cols-3 {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+
+  /* Features grid - single column on mobile */
+  .lg\:grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Comparison table - make scrollable */
+  .grid.grid-cols-3 {
+    display: block !important;
+    overflow-x: auto !important;
+  }
+
+  /* Social proof logos */
+  .grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Navigation adjustments */
+  nav .flex.space-x-6 {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+}
+
+/* Tablet fixes */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .text-8xl {
+    font-size: 4.5rem !important;
+  }
+  
+  .text-6xl {
+    font-size: 3.5rem !important;
+  }
+}
+
+/* Animation improvements */
+@keyframes gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 6s ease infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(200%) skewX(-12deg); }
+}
+
+.animate-shine {
+  animation: shine 3s ease-in-out infinite;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better backdrop blur support */
+@supports not (backdrop-filter: blur(12px)) {
+  .backdrop-blur-xl {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+  }
+  
+  .backdrop-blur-md {
+    background-color: rgba(15, 23, 42, 0.7) !important;
+  }
+}
+
+/* Fix overflow issues on mobile */
+body {
+  overflow-x: hidden;
+}
+
+/* Prevent horizontal scroll */
+* {
+  box-sizing: border-box;
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 768px) {
+  button,
+  a {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1.5rem;
+  }
+}
+
+/* Improve readability on small screens */
+@media (max-width: 640px) {
+  .leading-relaxed {
+    line-height: 1.75 !important;
+  }
+  
+  .max-w-4xl,
+  .max-w-2xl {
+    max-width: 100% !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+}
+
+/* Fix FAQ section on mobile */
+@media (max-width: 768px) {
+  details summary {
+    font-size: 0.95rem !important;
+  }
+}
+
+/* Better hover states on touch devices */
+@media (hover: none) {
+  .hover\:scale-105:hover {
+    transform: none !important;
+  }
+  
+  .group:hover {
+    transform: none !important;
+  }
+}
+
+/* Print styles (bonus) */
+@media print {
+  .bg-gradient-to-br,
+  .bg-gradient-to-r {
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* Accessibility improvements */
+.focus-visible\:ring {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Loading state */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Delay variations for staggered animations */
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+.delay-1000 {
+  animation-delay: 1000ms;
+}
+/* ===== FUNNEL SCORECARD ANIMATIONS & RESPONSIVE ===== */
+
+/* Smooth animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Apply animations */
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.5s ease-out;
+}
+
+.animate-shimmer {
+  animation: shimmer 3s infinite;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  background-size: 1000px 100%;
+}
+
+/* Delay classes for staggered animations */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-700 { animation-delay: 700ms; }
+.delay-1000 { animation-delay: 1000ms; }
+
+/* Responsive breakpoints for Funnel Scorecard */
+@media (max-width: 1280px) {
+  /* Stack columns on smaller screens */
+  .xl\:col-span-7,
+  .xl\:col-span-5 {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile adjustments */
+  .sm\:text-4xl {
+    font-size: 2rem !important;
+  }
+  
+  .sm\:text-5xl {
+    font-size: 2.5rem !important;
+  }
+
+  /* Score circle sizing */
+  .h-32.w-32 {
+    height: 7rem !important;
+    width: 7rem !important;
+  }
+
+  /* Chart heights */
+  .h-64 {
+    height: 12rem !important;
+  }
+
+  .h-48 {
+    height: 10rem !important;
+  }
+
+  /* Padding adjustments */
+  .p-6 {
+    padding: 1rem !important;
+  }
+
+  .p-8 {
+    padding: 1.25rem !important;
+  }
+
+  /* Gap adjustments */
+  .gap-6 {
+    gap: 1rem !important;
+  }
+
+  .gap-8 {
+    gap: 1.25rem !important;
+  }
+
+  /* Text sizing */
+  .text-3xl {
+    font-size: 1.5rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.25rem !important;
+  }
+
+  .text-xl {
+    font-size: 1.125rem !important;
+  }
+
+  /* Hide decorative elements on mobile */
+  .absolute.w-32.h-32,
+  .absolute.w-20.h-20 {
+    display: none;
+  }
+
+  /* Stack grid columns */
+  .grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .md\:grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Button stacking */
+  .flex.flex-wrap.gap-3 {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .flex.flex-wrap.gap-3 button {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Extra small devices */
+  .text-5xl {
+    font-size: 2rem !important;
+  }
+
+  .text-6xl {
+    font-size: 2.5rem !important;
+  }
+
+  /* Score circle */
+  .sm\:h-40.sm\:w-40 {
+    height: 6rem !important;
+    width: 6rem !important;
+  }
+
+  /* Font sizes in score circle */
+  .text-5xl.sm\:text-6xl {
+    font-size: 2.5rem !important;
+  }
+
+  /* Chart container padding */
+  .recharts-wrapper {
+    padding: 0 !important;
+  }
+
+  /* Insight cards */
+  .md\:grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Hover effects */
+.group:hover .group-hover\:scale-110 {
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+
+.group:hover .group-hover\:translate-x-1 {
+  transform: translateX(0.25rem);
+  transition: transform 0.2s ease;
+}
+
+.group:hover .group-hover\:translate-y-0\.5 {
+  transform: translateY(0.125rem);
+  transition: transform 0.2s ease;
+}
+
+.group:hover .group-hover\:rotate-180 {
+  transform: rotate(180deg);
+  transition: transform 0.5s ease;
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Custom scrollbar for insights */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.7);
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  /* Remove backgrounds for better printing */
+  .bg-gradient-to-br,
+  .bg-gradient-to-r {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Borders for structure */
+  section {
+    border: 2px solid #e5e7eb !important;
+  }
+}
+
+/* Loading skeleton animation */
+@keyframes skeleton {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton 1.5s infinite;
+}
+
+/* Focus states for accessibility */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #06b6d4;
+  outline-offset: 2px;
+}
+
+/* Tooltip styles */
+.recharts-tooltip-wrapper {
+  z-index: 1000;
+}
+
+/* Chart responsive container */
+.recharts-responsive-container {
+  min-height: 200px;
+}
+
+/* Gradient text effect */
+.gradient-text {
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #10b981 50%,
+    #06b6d4 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass morphism effect */
+.glass {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Glow effect on hover */
+.glow-hover {
+  transition: box-shadow 0.3s ease;
+}
+
+.glow-hover:hover {
+  box-shadow: 
+    0 0 20px rgba(6, 182, 212, 0.3),
+    0 0 40px rgba(6, 182, 212, 0.2),
+    0 0 60px rgba(6, 182, 212, 0.1);
+}
+
+/* Number counter animation */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.count-up {
+  animation: countUp 0.5s ease-out;
+}
+
+/* Status indicator pulse */
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-pulse {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* Card flip animation */
+@keyframes cardFlip {
+  0% {
+    transform: perspective(1000px) rotateY(0deg);
+  }
+  100% {
+    transform: perspective(1000px) rotateY(180deg);
+  }
+}
+
+.card-flip {
+  animation: cardFlip 0.6s ease;
+}
+
+/* Responsive utility classes */
+.text-responsive {
+  font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+.heading-responsive {
+  font-size: clamp(1.5rem, 5vw, 3rem);
+}
+
+/* Safe area padding for mobile notches */
+@supports (padding: env(safe-area-inset-left)) {
+  .safe-padding {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  /* Already optimized for dark mode */
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .border-slate-800 {
+    border-color: #ffffff !important;
+  }
+  
+  .text-slate-400 {
+    color: #e5e7eb !important;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) {
+  .hover\:scale-105:hover {
+    transform: none;
+  }
+  
+  /* Increase tap target size */
+  button,
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
 
 }

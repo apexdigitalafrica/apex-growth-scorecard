@@ -1,8 +1,7 @@
-// next.config.mjs
+// next.config.ts
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // ✅ Allow your logo from external domain
   images: {
     remotePatterns: [
       {
@@ -13,47 +12,42 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // ✅ Ignore ESLint during build (safe for deployment)
   eslint: {
     ignoreDuringBuilds: true,
   },
 
-  // ✅ Temporarily ignore TypeScript errors (we'll fix them later)
   typescript: {
-    ignoreBuildErrors: true,  // Change this back to false after fixing the 6 errors
+    ignoreBuildErrors: true,
   },
 
-  // ✅ ADD SECURITY HEADERS for dashboard protection
   async headers() {
     return [
       {
-        // Apply to all dashboard routes
         source: '/dashboard/:path*',
         headers: [
           {
             key: 'X-Frame-Options',
-            value: 'DENY',  // Prevent clickjacking
+            value: 'DENY',
           },
           {
             key: 'X-Content-Type-Options',
-            value: 'nosniff',  // Prevent MIME sniffing
+            value: 'nosniff',
           },
           {
             key: 'X-XSS-Protection',
-            value: '1; mode=block',  // Enable XSS filter
+            value: '1; mode=block',
           },
           {
             key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',  // Control referrer info
+            value: 'strict-origin-when-cross-origin',
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',  // Disable unnecessary features
+            value: 'camera=(), microphone=(), geolocation=()',
           },
         ],
       },
       {
-        // Apply to all API routes
         source: '/api/:path*',
         headers: [
           {
@@ -69,7 +63,6 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // ✅ ADD REDIRECTS for SEO and UX
   async redirects() {
     return [
       {
@@ -85,13 +78,10 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // ✅ OPTIMIZE PERFORMANCE
-  poweredByHeader: false,  // Remove X-Powered-By header
-  compress: true,  // Enable gzip compression
-  
-  // ✅ PRODUCTION OPTIMIZATIONS
-  reactStrictMode: true,  // Enable React strict mode
-  swcMinify: true,  // Use SWC for faster minification
+  poweredByHeader: false,
+  compress: true,
+  reactStrictMode: true,
+  // ✅ REMOVED swcMinify (it's enabled by default in Next.js 15)
 };
 
 export default nextConfig;
