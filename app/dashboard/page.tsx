@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { 
   TrendingUp, 
   TrendingDown,
+  ArrowRight,
   Users, 
   Target, 
   Download,
