@@ -29,15 +29,21 @@ interface ClientStats {
     user: string;
   }>;
 }
-export default function ClientDashboard() {
-  const { clientUser, isAuthenticated, isLoading } = useClientAuth(true);
+
+// Remove the duplicate function declaration and fix the existing one
 export default function ClientDashboard() {
   const router = useRouter();
+  const { clientUser, isAuthenticated, isLoading } = useClientAuth(true);
   const [stats, setStats] = useState<ClientStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // Mock client data - replace with real auth later
-  const clientUser = {
+  // Show loading while checking auth
+  if (isLoading || !isAuthenticated) {
+    return <ClientLoadingScreen companyName="Your Company" />;
+  }
+
+  // Mock client data - will be replaced by real auth
+  const mockClientUser = clientUser || {
     id: 'client-1',
     full_name: 'John CEO',
     role: 'owner' as const,
@@ -45,14 +51,15 @@ export default function ClientDashboard() {
       id: 'company-1',
       company_name: 'Moratech Limited',
       primary_color: '#0066CC',
-      logo_url: null
+      logo_url: null,
+      contact_email: 'ceo@moratech.ng'
     }
   };
 
   useEffect(() => {
     // Simulate loading client-specific data
     const loadClientData = async () => {
-      setIsLoading(true);
+      setDataLoading(true);
       
       // This would be your API call to get client-specific stats
       setTimeout(() => {
@@ -77,17 +84,16 @@ export default function ClientDashboard() {
             }
           ]
         });
-        setIsLoading(false);
+        setDataLoading(false);
       }, 1000);
     };
 
     loadClientData();
   }, []);
 
- 	 // Show loading while checking auth
-  if (isLoading || !isAuthenticated) {
-    return <ClientLoadingScreen companyName="Your Company" />;
-  }
+  // Use the real clientUser from auth if available, otherwise mock
+  const currentClientUser = clientUser || mockClientUser;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Client Branded Header */}
@@ -97,13 +103,13 @@ export default function ClientDashboard() {
             <div className="flex items-center gap-4">
               <div 
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                style={{ backgroundColor: clientUser.client.primary_color }}
+                style={{ backgroundColor: currentClientUser.client.primary_color }}
               >
-                {clientUser.client.company_name.substring(0, 2).toUpperCase()}
+                {currentClientUser.client.company_name.substring(0, 2).toUpperCase()}
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">
-                  {clientUser.client.company_name} Portal
+                  {currentClientUser.client.company_name} Portal
                 </h1>
                 <p className="text-sm text-gray-500">Growth Analytics Dashboard</p>
               </div>
@@ -116,7 +122,7 @@ export default function ClientDashboard() {
               </div>
               <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-gray-600">
-                  {clientUser.full_name.split(' ').map(n => n[0]).join('')}
+                  {currentClientUser.full_name.split(' ').map(n => n[0]).join('')}
                 </span>
               </div>
             </div>
