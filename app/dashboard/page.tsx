@@ -28,8 +28,9 @@ import {
   FileSpreadsheet,
   Eye,
   X,
-  Lock,  // ✅ ADDED for security badge
-  Shield  // ✅ ADDED for security badge
+  Lock, 
+  Shield 
+  Award 
 } from 'lucide-react';
 import AIGrowthChatbot from '@/components/AIGrowthChatbot';
 
