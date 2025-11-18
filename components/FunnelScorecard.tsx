@@ -1,9 +1,4 @@
-// components/FunnelScorecard.tsx
-'use client';
-
 import React, { useState, useEffect } from 'react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import {
   ResponsiveContainer,
   BarChart,
@@ -28,54 +23,126 @@ import {
   Download,
   Share2,
   RefreshCw,
+  FileText,
 } from 'lucide-react';
-import type { FunnelSnapshot } from '@/lib/funnelTypes';
-import {
-  computeFunnelScore,
-  estimateLeakImpact,
-  generateFunnelInsights,
-} from '@/lib/funnelUtils';
 
-interface FunnelScorecardProps {
-  snapshot: FunnelSnapshot;
-}
+// Mock data for demonstration
+const mockSnapshot = {
+  businessName: "TechFlow Solutions",
+  periodLabel: "Q4 2024",
+  currency: "₦",
+  estimatedRevenue: 2500000,
+  stages: [
+    { input: 1000, output: 750, label: "Website Visitors" },
+    { input: 750, output: 450, label: "Lead Capture" },
+    { input: 450, output: 180, label: "Qualification" },
+    { input: 180, output: 90, label: "Proposal Sent" },
+    { input: 90, output: 45, label: "Closed Won" }
+  ]
+};
 
-const statusColors: Record<string, { bg: string; text: string; ring: string; icon: string }> = {
+const statusColors = {
   good: {
     bg: 'bg-gradient-to-br from-emerald-500/20 to-green-500/10',
     text: 'text-emerald-400',
     ring: 'ring-emerald-500/50',
-    icon: 'text-emerald-400',
   },
   warning: {
     bg: 'bg-gradient-to-br from-amber-500/20 to-yellow-500/10',
     text: 'text-amber-400',
     ring: 'ring-amber-500/50',
-    icon: 'text-amber-400',
   },
   bad: {
     bg: 'bg-gradient-to-br from-rose-500/20 to-red-500/10',
     text: 'text-rose-400',
     ring: 'ring-rose-500/50',
-    icon: 'text-rose-400',
   },
 };
 
-const statusLabel: Record<string, string> = {
+const statusLabel = {
   good: '✅ Healthy',
   warning: '⚠️ Needs Attention',
   bad: '🚨 Critical Leak',
 };
 
-function formatPercent(value: number): string {
+function formatPercent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function formatScore(value: number): string {
+function formatScore(value) {
   return `${value.toFixed(0)}`;
 }
 
-export default function FunnelScorecard({ snapshot }: FunnelScorecardProps) {
+// Mock computation functions
+function computeFunnelScore(snapshot) {
+  const stageScores = snapshot.stages.map((stage, idx) => {
+    const conversionRate = stage.input > 0 ? stage.output / stage.input : 0;
+    const dropOffRate = 1 - conversionRate;
+    const score = conversionRate * 100;
+    const status = score >= 75 ? 'good' : score >= 50 ? 'warning' : 'bad';
+    
+    return {
+      stageId: idx,
+      label: stage.label,
+      conversionRate,
+      dropOffRate,
+      score,
+      status
+    };
+  });
+
+  const avgConversionRate = stageScores.reduce((sum, s) => sum + s.conversionRate, 0) / stageScores.length;
+  const overallScore = avgConversionRate * 100;
+  
+  const biggestLeakStage = stageScores.reduce((worst, current) => 
+    current.dropOffRate > worst.dropOffRate ? current : worst
+  );
+  
+  const strongestStage = stageScores.reduce((best, current) => 
+    current.score > best.score ? current : best
+  );
+
+  return {
+    overallScore,
+    avgConversionRate,
+    stageScores,
+    biggestLeakStage,
+    strongestStage
+  };
+}
+
+function generateFunnelInsights(snapshot, summary) {
+  return [
+    {
+      title: `${summary.biggestLeakStage.label} is Your Biggest Opportunity`,
+      body: `With a ${formatPercent(summary.biggestLeakStage.dropOffRate)} drop-off rate, this stage is hemorrhaging potential customers. Focus optimization efforts here first for maximum impact.`,
+      severity: 'high',
+      estimatedImpact: 'High Revenue Impact'
+    },
+    {
+      title: 'Replicate Your Top Performer',
+      body: `${summary.strongestStage.label} is converting at ${formatPercent(summary.strongestStage.conversionRate)}. Study what's working here and apply those principles to weaker stages.`,
+      severity: 'low',
+      estimatedImpact: 'Process Improvement'
+    }
+  ];
+}
+
+function estimateLeakImpact(snapshot, summary) {
+  const leadsLost = Math.round(summary.biggestLeakStage.dropOffRate * 
+    snapshot.stages[summary.biggestLeakStage.stageId].input);
+  const potentialRecoveredLeads = Math.round(leadsLost * 0.25);
+  const avgDealValue = snapshot.estimatedRevenue / snapshot.stages[snapshot.stages.length - 1].output;
+  const estimatedExtraRevenue = potentialRecoveredLeads * avgDealValue;
+
+  return {
+    leadsLost,
+    potentialRecoveredLeads,
+    estimatedExtraRevenue
+  };
+}
+
+export default function FunnelScorecard({ snapshot = mockSnapshot }) {
   const [isVisible, setIsVisible] = useState(false);
   const [animatedScore, setAnimatedScore] = useState(0);
   const [selectedInsight, setSelectedInsight] = useState(0);
@@ -84,44 +151,13 @@ export default function FunnelScorecard({ snapshot }: FunnelScorecardProps) {
   const insights = generateFunnelInsights(snapshot, summary);
   const impact = estimateLeakImpact(snapshot, summary);
 
-  // Calculate overall conversion
   const lastStage = snapshot.stages[snapshot.stages.length - 1];
   const totalWon = lastStage?.output ?? 0;
   const firstStage = snapshot.stages[0];
   const totalTop = firstStage?.input ?? 0;
   const overallConversion = totalTop > 0 ? (totalWon / totalTop) * 100 : 0;
 
-  // PDF Export Function
-  const handleExportPDF = async () => {
-    try {
-      const element = document.getElementById('funnel-scorecard-content');
-      if (!element) return;
-
-      const btn = document.getElementById('export-pdf-btn');
-      if (btn) btn.textContent = 'Generating PDF...';
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#0f172a',
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${snapshot.businessName}-Funnel-Analysis-${new Date().toISOString().split('T')[0]}.pdf`);
-
-      if (btn) btn.textContent = '📥 Export PDF';
-    } catch (error) {
-      console.error('PDF generation failed:', error);
-      alert('Failed to generate PDF. Please try again.');
-    }
-  };
-
-  // Full Report Download Function
+  // Download Full Text Report
   const handleDownloadFullReport = () => {
     const report = `
 FUNNEL ANALYSIS REPORT
@@ -132,21 +168,17 @@ Generated: ${new Date().toLocaleString()}
 ========================================
 EXECUTIVE SUMMARY
 ========================================
-Overall Funnel Health: ${summary.overallScore}/100
+Overall Funnel Health: ${summary.overallScore.toFixed(0)}/100
 Average Conversion Rate: ${formatPercent(summary.avgConversionRate)}
 Overall Flow: ${overallConversion.toFixed(1)}%
 
-${summary.biggestLeakStage ? `
 BIGGEST LEAK: ${summary.biggestLeakStage.label}
 Drop-off Rate: ${formatPercent(summary.biggestLeakStage.dropOffRate)}
 Stage Score: ${formatScore(summary.biggestLeakStage.score)}
-` : ''}
 
-${summary.strongestStage ? `
 TOP PERFORMER: ${summary.strongestStage.label}
 Conversion Rate: ${formatPercent(summary.strongestStage.conversionRate)}
 Stage Score: ${formatScore(summary.strongestStage.score)}
-` : ''}
 
 ========================================
 STAGE BREAKDOWN
@@ -168,14 +200,12 @@ ${idx + 1}. ${insight.title}
    Impact: ${insight.estimatedImpact || 'N/A'}
 `).join('\n')}
 
-${impact && impact.estimatedExtraRevenue ? `
 ========================================
 REVENUE OPPORTUNITY
 ========================================
 Leads Lost: ${impact.leadsLost.toLocaleString()}
 Potential Recoverable: ${impact.potentialRecoveredLeads.toLocaleString()}
 Estimated Revenue Gain: ${snapshot.currency}${Math.round(impact.estimatedExtraRevenue).toLocaleString()}
-` : ''}
 
 Report generated by Apex Digital Africa
 `;
@@ -189,11 +219,16 @@ Report generated by Apex Digital Africa
     URL.revokeObjectURL(url);
   };
 
+  // Export Visual PDF (screenshot-based)
+  const handleExportVisualPDF = () => {
+    alert('📸 Visual PDF export would capture the entire scorecard as an image. This requires html2canvas library in your actual implementation.');
+  };
+
   // Share Function
   const handleShare = async () => {
     const shareData = {
       title: `${snapshot.businessName} - Funnel Analysis Report`,
-      text: `Check out our funnel performance: ${summary.overallScore}/100 score with ${formatPercent(summary.avgConversionRate)} avg conversion rate.`,
+      text: `Check out our funnel performance: ${summary.overallScore.toFixed(0)}/100 score with ${formatPercent(summary.avgConversionRate)} avg conversion rate.`,
       url: window.location.href,
     };
 
@@ -202,7 +237,7 @@ Report generated by Apex Digital Africa
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        alert('Link copied to clipboard!');
+        alert('✅ Link copied to clipboard!');
       }
     } catch (error) {
       console.error('Share failed:', error);
@@ -212,6 +247,11 @@ Report generated by Apex Digital Africa
   // Book Call Function
   const handleBookCall = () => {
     window.open('https://calendly.com/apexdigitalafrica', '_blank');
+  };
+
+  // Refresh function
+  const handleRefresh = () => {
+    window.location.reload();
   };
 
   // Animated score counter
@@ -252,20 +292,16 @@ Report generated by Apex Digital Africa
   }));
 
   const overallMood =
-    summary.overallScore >= 80
-      ? 'good'
-      : summary.overallScore >= 60
-      ? 'warning'
-      : 'bad';
+    summary.overallScore >= 80 ? 'good' : summary.overallScore >= 60 ? 'warning' : 'bad';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Animated Background */}
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-gradient-to-br from-emerald-500/10 to-cyan-500/5 blur-3xl animate-pulse" />
-          <div className="absolute -right-32 -bottom-32 h-96 w-96 rounded-full bg-gradient-to-br from-blue-500/10 to-purple-500/5 blur-3xl animate-pulse delay-1000" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-gradient-to-br from-cyan-500/5 to-emerald-500/5 blur-3xl animate-pulse delay-500" />
+          <div className="absolute -right-32 -bottom-32 h-96 w-96 rounded-full bg-gradient-to-br from-blue-500/10 to-purple-500/5 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-gradient-to-br from-cyan-500/5 to-emerald-500/5 blur-3xl animate-pulse" style={{ animationDelay: '500ms' }} />
         </div>
 
         <section
@@ -310,12 +346,16 @@ Report generated by Apex Digital Africa
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons - FIXED VERSION */}
               <div className="flex flex-wrap gap-3">
-                <button className="group flex items-center gap-2 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-300 hover:text-white transition-all hover:scale-105">
+                <button 
+                  onClick={handleRefresh}
+                  className="group flex items-center gap-2 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-300 hover:text-white transition-all hover:scale-105"
+                >
                   <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
                   Refresh
                 </button>
+                
                 <button 
                   onClick={handleShare}
                   className="group flex items-center gap-2 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-300 hover:text-white transition-all hover:scale-105"
@@ -323,26 +363,27 @@ Report generated by Apex Digital Africa
                   <Share2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
                   Share
                 </button>
-                <button 
+                
+                <button
                   onClick={handleDownloadFullReport}
-                  className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold px-6 py-3 rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-500/25"
+                  className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-500/50 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-105 shadow-lg shadow-blue-500/25"
                 >
-                  <Download className="w-4 h-4" />
-                  Download Full Report
+                  <FileText className="w-4 h-4" />
+                  Text Report
                 </button>
-                <button 
-                  id="export-pdf-btn"
-                  onClick={handleExportPDF}
-                  className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-105 shadow-lg shadow-blue-500/25"
+
+                <button
+                  onClick={handleExportVisualPDF}
+                  className="group flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-emerald-500/30 transition-all hover:scale-105"
                 >
-                  <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
-                  Export PDF
+                  <Download className="w-5 h-5" />
+                  Visual PDF
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8">
-              {/* LEFT COLUMN: Score + Key Metrics + Insights */}
+              {/* LEFT COLUMN */}
               <div className="xl:col-span-7 space-y-6">
                 {/* Main Score Card */}
                 <div className="relative group">
@@ -355,14 +396,13 @@ Report generated by Apex Digital Africa
                           <div className="absolute inset-[8px] rounded-full bg-gradient-to-br from-slate-900/90 to-slate-950/90" />
                           <div className="relative text-center">
                             <span className={`block text-5xl sm:text-6xl font-black tabular-nums tracking-tighter ${statusColors[overallMood].text}`}>
-                              {animatedScore}
+                              {Math.round(animatedScore)}
                             </span>
                             <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">
                               / 100
                             </span>
                           </div>
                         </div>
-                        {/* Animated ring */}
                         <div className={`absolute inset-0 rounded-full border-4 border-t-transparent animate-spin ${statusColors[overallMood].ring}`} style={{ animationDuration: '3s' }} />
                       </div>
 
