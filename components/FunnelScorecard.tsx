@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ResponsiveContainer,
   BarChart,
@@ -75,6 +75,16 @@ function formatScore(value) {
 
 // Mock computation functions
 function computeFunnelScore(snapshot) {
+  if (!snapshot?.stages || snapshot.stages.length === 0) {
+    return {
+      overallScore: 0,
+      avgConversionRate: 0,
+      stageScores: [],
+      biggestLeakStage: null,
+      strongestStage: null
+    };
+  }
+
   const stageScores = snapshot.stages.map((stage, idx) => {
     const conversionRate = stage.input > 0 ? stage.output / stage.input : 0;
     const dropOffRate = 1 - conversionRate;
@@ -91,16 +101,23 @@ function computeFunnelScore(snapshot) {
     };
   });
 
-  const avgConversionRate = stageScores.reduce((sum, s) => sum + s.conversionRate, 0) / stageScores.length;
+  const avgConversionRate = stageScores.length > 0 
+    ? stageScores.reduce((sum, s) => sum + s.conversionRate, 0) / stageScores.length 
+    : 0;
+  
   const overallScore = avgConversionRate * 100;
   
-  const biggestLeakStage = stageScores.reduce((worst, current) => 
-    current.dropOffRate > worst.dropOffRate ? current : worst
-  );
+  const biggestLeakStage = stageScores.length > 0 
+    ? stageScores.reduce((worst, current) => 
+        current.dropOffRate > worst.dropOffRate ? current : worst
+      )
+    : null;
   
-  const strongestStage = stageScores.reduce((best, current) => 
-    current.score > best.score ? current : best
-  );
+  const strongestStage = stageScores.length > 0
+    ? stageScores.reduce((best, current) => 
+        current.score > best.score ? current : best
+      )
+    : null;
 
   return {
     overallScore,
@@ -112,27 +129,56 @@ function computeFunnelScore(snapshot) {
 }
 
 function generateFunnelInsights(snapshot, summary) {
-  return [
-    {
+  const insights = [];
+  
+  if (summary.biggestLeakStage) {
+    insights.push({
       title: `${summary.biggestLeakStage.label} is Your Biggest Opportunity`,
       body: `With a ${formatPercent(summary.biggestLeakStage.dropOffRate)} drop-off rate, this stage is hemorrhaging potential customers. Focus optimization efforts here first for maximum impact.`,
       severity: 'high',
       estimatedImpact: 'High Revenue Impact'
-    },
-    {
+    });
+  }
+  
+  if (summary.strongestStage) {
+    insights.push({
       title: 'Replicate Your Top Performer',
       body: `${summary.strongestStage.label} is converting at ${formatPercent(summary.strongestStage.conversionRate)}. Study what's working here and apply those principles to weaker stages.`,
       severity: 'low',
       estimatedImpact: 'Process Improvement'
-    }
-  ];
+    });
+  }
+
+  // Add a default insight if no specific ones were generated
+  if (insights.length === 0) {
+    insights.push({
+      title: 'Optimize Your Funnel Stages',
+      body: 'Focus on improving conversion rates across all stages to maximize revenue potential.',
+      severity: 'medium',
+      estimatedImpact: 'General Improvement'
+    });
+  }
+
+  return insights;
 }
 
 function estimateLeakImpact(snapshot, summary) {
-  const leadsLost = Math.round(summary.biggestLeakStage.dropOffRate * 
-    snapshot.stages[summary.biggestLeakStage.stageId].input);
+  if (!summary?.biggestLeakStage || !snapshot?.stages || snapshot.stages.length === 0) {
+    return {
+      leadsLost: 0,
+      potentialRecoveredLeads: 0,
+      estimatedExtraRevenue: 0
+    };
+  }
+  
+  const stageIndex = summary.biggestLeakStage.stageId;
+  const stageInput = snapshot.stages[stageIndex]?.input || 0;
+  
+  const leadsLost = Math.round(summary.biggestLeakStage.dropOffRate * stageInput);
   const potentialRecoveredLeads = Math.round(leadsLost * 0.25);
-  const avgDealValue = snapshot.estimatedRevenue / snapshot.stages[snapshot.stages.length - 1].output;
+  
+  const lastStageOutput = snapshot.stages[snapshot.stages.length - 1]?.output || 1;
+  const avgDealValue = snapshot.estimatedRevenue / lastStageOutput;
   const estimatedExtraRevenue = potentialRecoveredLeads * avgDealValue;
 
   return {
@@ -146,14 +192,29 @@ export default function FunnelScorecard({ snapshot = mockSnapshot }) {
   const [isVisible, setIsVisible] = useState(false);
   const [animatedScore, setAnimatedScore] = useState(0);
   const [selectedInsight, setSelectedInsight] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const summary = computeFunnelScore(snapshot);
-  const insights = generateFunnelInsights(snapshot, summary);
-  const impact = estimateLeakImpact(snapshot, summary);
+  // Validate snapshot data
+  if (!snapshot || !snapshot.stages || snapshot.stages.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
+        <div className="text-white text-center">
+          <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-amber-400" />
+          <h2 className="text-xl font-bold">No Data Available</h2>
+          <p className="text-slate-400">Please provide valid funnel data</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Memoize expensive calculations
+  const summary = useMemo(() => computeFunnelScore(snapshot), [snapshot]);
+  const insights = useMemo(() => generateFunnelInsights(snapshot, summary), [snapshot, summary]);
+  const impact = useMemo(() => estimateLeakImpact(snapshot, summary), [snapshot, summary]);
 
   const lastStage = snapshot.stages[snapshot.stages.length - 1];
-  const totalWon = lastStage?.output ?? 0;
   const firstStage = snapshot.stages[0];
+  const totalWon = lastStage?.output ?? 0;
   const totalTop = firstStage?.input ?? 0;
   const overallConversion = totalTop > 0 ? (totalWon / totalTop) * 100 : 0;
 
@@ -172,13 +233,13 @@ Overall Funnel Health: ${summary.overallScore.toFixed(0)}/100
 Average Conversion Rate: ${formatPercent(summary.avgConversionRate)}
 Overall Flow: ${overallConversion.toFixed(1)}%
 
-BIGGEST LEAK: ${summary.biggestLeakStage.label}
+${summary.biggestLeakStage ? `BIGGEST LEAK: ${summary.biggestLeakStage.label}
 Drop-off Rate: ${formatPercent(summary.biggestLeakStage.dropOffRate)}
-Stage Score: ${formatScore(summary.biggestLeakStage.score)}
+Stage Score: ${formatScore(summary.biggestLeakStage.score)}` : 'No leak data available'}
 
-TOP PERFORMER: ${summary.strongestStage.label}
+${summary.strongestStage ? `TOP PERFORMER: ${summary.strongestStage.label}
 Conversion Rate: ${formatPercent(summary.strongestStage.conversionRate)}
-Stage Score: ${formatScore(summary.strongestStage.score)}
+Stage Score: ${formatScore(summary.strongestStage.score)}` : 'No top performer data available'}
 
 ========================================
 STAGE BREAKDOWN
@@ -214,7 +275,7 @@ Report generated by Apex Digital Africa
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${snapshot.businessName}-Full-Funnel-Report-${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `${snapshot.businessName.replace(/\s+/g, '-')}-Full-Funnel-Report-${new Date().toISOString().split('T')[0]}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -249,9 +310,12 @@ Report generated by Apex Digital Africa
     window.open('https://calendly.com/apexdigitalafrica', '_blank');
   };
 
-  // Refresh function
+  // Refresh function with loading state
   const handleRefresh = () => {
-    window.location.reload();
+    setIsLoading(true);
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   };
 
   // Animated score counter
@@ -293,6 +357,18 @@ Report generated by Apex Digital Africa
 
   const overallMood =
     summary.overallScore >= 80 ? 'good' : summary.overallScore >= 60 ? 'warning' : 'bad';
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 mx-auto mb-4 text-cyan-400 animate-spin" />
+          <h2 className="text-xl font-bold text-white">Refreshing Data...</h2>
+          <p className="text-slate-400">Please wait</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950">
@@ -346,7 +422,7 @@ Report generated by Apex Digital Africa
                 </div>
               </div>
 
-              {/* Action Buttons - FIXED VERSION */}
+              {/* Action Buttons */}
               <div className="flex flex-wrap gap-3">
                 <button 
                   onClick={handleRefresh}
@@ -471,7 +547,7 @@ Report generated by Apex Digital Africa
                       </p>
                       <p className="text-2xl font-black text-white">
                         {snapshot.currency ?? '₦'}
-                        {Math.round(snapshot.estimatedRevenue / totalWon).toLocaleString()}
+                        {totalWon > 0 ? Math.round(snapshot.estimatedRevenue / totalWon).toLocaleString() : '0'}
                       </p>
                     </div>
                   </div>
@@ -515,7 +591,7 @@ Report generated by Apex Digital Africa
                             <p className="text-xs text-rose-200 leading-relaxed">
                               💰 <span className="font-bold">{impact.leadsLost.toLocaleString()}</span> people lost here. 
                               Recover 25% = <span className="font-bold">{impact.potentialRecoveredLeads.toLocaleString()}</span> extra opportunities
-                              {impact.estimatedExtraRevenue && (
+                              {impact.estimatedExtraRevenue > 0 && (
                                 <span className="block mt-1">
                                   Worth ≈ <span className="font-bold text-rose-100">{snapshot.currency ?? '₦'}{Math.round(impact.estimatedExtraRevenue).toLocaleString()}</span>
                                 </span>
@@ -639,7 +715,7 @@ Report generated by Apex Digital Africa
                           </div>
                         </div>
 
-                        {impact && impact.estimatedExtraRevenue && selectedInsight === 0 && (
+                        {impact?.estimatedExtraRevenue > 0 && selectedInsight === 0 && (
                           <div className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30 rounded-xl p-4">
                             <div className="flex items-start gap-3">
                               <DollarSign className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
