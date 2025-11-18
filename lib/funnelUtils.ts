@@ -1,9 +1,4 @@
-import type {
-  FunnelSnapshot,
-  FunnelScoreSummary,
-  StageScore,
-  FunnelStageStatus,
-} from './funnelTypes';
+import type { FunnelSnapshot, FunnelScoreSummary, StageScore, FunnelStageStatus } from './funnelTypes';
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -73,59 +68,23 @@ export function estimateLeakImpact(snapshot: FunnelSnapshot, summary: FunnelScor
 export function generateFunnelInsights(snapshot: FunnelSnapshot, summary: FunnelScoreSummary): FunnelInsight[] {
   const insights: FunnelInsight[] = [];
   if (summary.overallScore >= 80) {
-    insights.push({
-      title: 'Elite Performance: Your Funnel is in the Top 10%',
-      body: 'Your funnel is outperforming 90% of businesses. Focus on scaling what works.',
-      severity: 'low',
-      actionItems: ['Increase ad spend on best-performing channels', 'A/B test your strongest stage', 'Document your processes', 'Build automation'],
-      estimatedImpact: 'Scaling could 2-3x revenue in 90 days',
-    });
+    insights.push({ title: 'Elite Performance: Your Funnel is in the Top 10%', body: 'Your funnel is outperforming 90 percent of businesses. Focus on scaling what works.', severity: 'low', actionItems: ['Increase ad spend on best channels', 'Test your strongest stage', 'Document processes', 'Build automation'], estimatedImpact: 'Scaling could 2-3x revenue in 90 days' });
   } else if (summary.overallScore >= 60) {
-    insights.push({
-      title: 'Solid Foundation with Revenue Leaks',
-      body: 'Your funnel performs above average but has leaks. Small fixes unlock big revenue.',
-      severity: 'medium',
-      actionItems: ['Map customer journey at weakest stage', 'Add exit-intent surveys', 'Set up retargeting', 'Automate follow-ups'],
-      estimatedImpact: 'Fixing top 2 leaks could increase revenue 25-40%',
-    });
+    insights.push({ title: 'Solid Foundation with Revenue Leaks', body: 'Your funnel performs above average but has leaks. Small fixes unlock big revenue.', severity: 'medium', actionItems: ['Map customer journey at weakest stage', 'Add exit surveys', 'Set up retargeting', 'Automate follow-ups'], estimatedImpact: 'Fixing top 2 leaks could increase revenue 25-40 percent' });
   } else {
-    insights.push({
-      title: 'Critical Revenue Leak',
-      body: 'Your funnel loses 60%+ of customers. This is a conversion problem, not traffic.',
-      severity: 'high',
-      actionItems: ['Audit all stages TODAY', 'Simplify your offer', 'Reduce friction', 'Speed up follow-up'],
-      estimatedImpact: 'Could double or triple revenue',
-    });
+    insights.push({ title: 'Critical Revenue Leak', body: 'Your funnel loses 60 percent of customers. This is a conversion problem, not traffic.', severity: 'high', actionItems: ['Audit all stages TODAY', 'Simplify your offer', 'Reduce friction', 'Speed up follow-up'], estimatedImpact: 'Could double or triple revenue' });
   }
   if (summary.biggestLeakStage) {
     const rate = (summary.biggestLeakStage.dropOffRate * 100).toFixed(1);
-    insights.push({
-      title: `Massive Leak: ${summary.biggestLeakStage.label}`,
-      body: `This stage loses ${rate}% of prospects. Your biggest opportunity.`,
-      severity: 'high',
-      actionItems: ['Record customer calls to find objections', 'Simplify this stage by 50%', 'Add social proof', 'Implement guarantees'],
-      estimatedImpact: `Could recover ${rate}% more customers`,
-    });
+    insights.push({ title: `Massive Leak: ${summary.biggestLeakStage.label}`, body: `This stage loses ${rate} percent of prospects. Your biggest opportunity.`, severity: 'high', actionItems: ['Record customer calls', 'Simplify by 50 percent', 'Add social proof', 'Add guarantees'], estimatedImpact: `Could recover ${rate} percent more customers` });
   }
   if (summary.strongestStage) {
-    insights.push({
-      title: `Top Performer: ${summary.strongestStage.label}`,
-      body: 'This stage converts exceptionally well. Replicate this success.',
-      severity: 'medium',
-      actionItems: ['Document what works here', 'Interview successful customers', 'Apply to weaker stages', 'Train team on best practices'],
-      estimatedImpact: 'Could improve weak stages 2-3x',
-    });
+    insights.push({ title: `Top Performer: ${summary.strongestStage.label}`, body: 'This stage converts exceptionally well. Replicate this success.', severity: 'medium', actionItems: ['Document what works', 'Interview customers', 'Apply to weaker stages', 'Train team'], estimatedImpact: 'Could improve weak stages 2-3x' });
   }
   const impact = estimateLeakImpact(snapshot, summary);
   if (impact?.estimatedExtraRevenue) {
     const revenue = Math.round(impact.estimatedExtraRevenue).toLocaleString();
-    insights.push({
-      title: 'Hidden Revenue Opportunity',
-      body: `About ${snapshot.currency}${revenue} trapped in your funnel right now.`,
-      severity: 'high',
-      actionItems: ['Calculate ROI of fixes vs new traffic', 'Focus 70% on fixes, 30% on traffic', 'Set 30-day sprint for top 3 leaks', 'Measure daily'],
-      estimatedImpact: `Recover 25% = ${snapshot.currency}${revenue}`,
-    });
+    insights.push({ title: 'Hidden Revenue Opportunity', body: `About ${snapshot.currency}${revenue} trapped in your funnel right now.`, severity: 'high', actionItems: ['Calculate ROI of fixes', 'Focus on fixes not traffic', 'Set 30-day sprint', 'Measure daily'], estimatedImpact: `Recover 25 percent = ${snapshot.currency}${revenue}` });
   }
   return insights.slice(0, 5);
 }
@@ -134,13 +93,13 @@ export function generateExecutiveSummary(snapshot: FunnelSnapshot, summary: Funn
   const impact = estimateLeakImpact(snapshot, summary);
   let text = `Funnel Health: ${summary.overallScore}/100\n\n`;
   if (summary.overallScore >= 80) {
-    text += 'Status: HEALTHY - Top 10%. Ready to scale.\n\n';
+    text += 'Status: HEALTHY - Top 10 percent. Ready to scale.\n\n';
   } else if (summary.overallScore >= 60) {
     text += 'Status: MODERATE - Has leaks. Optimize before scaling.\n\n';
   } else {
     text += 'Status: CRITICAL - Immediate action needed.\n\n';
   }
-  text += `Avg Conversion: ${(summary.avgConversionRate * 100).toFixed(1)}%\n`;
+  text += `Avg Conversion: ${(summary.avgConversionRate * 100).toFixed(1)} percent\n`;
   text += `Biggest Leak: ${summary.biggestLeakStage?.label}\n`;
   text += `Top Stage: ${summary.strongestStage?.label}\n`;
   if (impact?.estimatedExtraRevenue) {
