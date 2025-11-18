@@ -210,11 +210,11 @@ export function generateFunnelInsights(
       ],
       estimatedImpact: 'Scaling now could 2-3x your current revenue in 90 days',
     });
-  } else if (summary.overallScore >= 60) {
+   } else if (summary.overallScore >= 60) {
     insights.push({
       title: '📈 Solid Foundation with Hidden Revenue Leaks',
       body:
-        'Your funnel performs above average (top 40%), but you're leaving money on the table. Small improvements at leak points will unlock significant revenue without increasing traffic.',
+        'Your funnel performs above average (top 40%), but you are leaving money on the table. Small improvements at leak points will unlock significant revenue without increasing traffic.',
       severity: 'medium',
       actionItems: [
         'Map the customer journey at your weakest stage',
@@ -228,7 +228,7 @@ export function generateFunnelInsights(
     insights.push({
       title: '🚨 Critical Revenue Leak: Immediate Action Required',
       body:
-        'Your funnel is losing 60%+ of potential customers. This is NOT a traffic problem—it's a conversion and follow-up issue. Every day you delay fixing this costs you real revenue.',
+        'Your funnel is losing 60%+ of potential customers. This is NOT a traffic problem—it is a conversion and follow-up issue. Every day you delay fixing this costs you real revenue.',
       severity: 'high',
       actionItems: [
         'Audit all stages for friction points TODAY',
@@ -240,6 +240,7 @@ export function generateFunnelInsights(
         'Fixing these leaks could double or triple your current revenue',
     });
   }
+
 
   // 2. Biggest leak insight with surgical precision
   if (summary.biggestLeakStage) {
