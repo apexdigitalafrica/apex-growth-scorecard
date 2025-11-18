@@ -291,8 +291,7 @@ export default function Dashboard() {
     </Link>
 
     {/* Funnel Analysis Tool */}
-    // In your Dashboard component, replace the Funnel Analysis card with:
-<Link
+   <Link
   href="/funnel-analysis"
   className="group bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500 transition-all hover:scale-105"
 >
