@@ -1,5 +1,4 @@
 // app/api/chat/route.ts
-// app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
@@ -20,6 +19,18 @@ export async function POST(request: NextRequest) {
 
   try {
     const { message, context } = await request.json();
+
+    // ✅ ADD VALIDATION: Check if dimension data makes sense
+    if (context?.dimensionScores?.length > 0) {
+      const firstDim = context.dimensionScores[0];
+      const lastDim = context.dimensionScores[context.dimensionScores.length - 1];
+      
+      // If "weakest" has higher % than "strongest", reverse the array
+      if (firstDim.percentage > lastDim.percentage) {
+        console.warn('⚠️ Dimensions reversed - fixing...');
+        context.dimensionScores = context.dimensionScores.reverse();
+      }
+    }
 
     const contextString = context
       ? `Company: ${context.company || 'Unknown'}
@@ -99,11 +110,9 @@ When users share their scorecard results, focus on:
     
     return NextResponse.json(
       {
-        response: "I'm having trouble connecting right now. 😔\n\nWhile I get back online, you can:\n📧 Email: hello@apexdigitalafrica@apexdigitalafrica.com\n📞 WhatsApp: +1(555)8900637\n📅 Book a call: https://calendly.com/apexdigitalafrica\n\nI'll be back shortly!"
+        response: "I'm having trouble connecting right now. 😔\n\nWhile I get back online, you can:\n📧 Email: info@apexdigitalafrica.com\n📞 WhatsApp: +234-XXX-XXX-XXXX\n📅 Book a call: https://calendly.com/apexdigitalafrica\n\nI'll be back shortly!"
       },
       { status: 200 }
     );
   }
 }
-
-    
