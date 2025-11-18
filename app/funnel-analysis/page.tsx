@@ -1,92 +1,110 @@
 // app/funnel-analysis/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import FunnelScorecard from '@/components/FunnelScorecard';
-import type { FunnelSnapshot } from '@/lib/funnelTypes';
-import { Download, RefreshCw } from 'lucide-react';
+import { transformToFunnelStages } from '@/lib/funnelDataTransformer';
+import { DashboardStats, FunnelSnapshot } from '@/types/dashboard';
+import { RefreshCw, Sparkles, AlertTriangle } from 'lucide-react';
 
 export default function FunnelAnalysisPage() {
-  // Example data - replace with real data from your backend
-  const [snapshot] = useState<FunnelSnapshot>({
-    businessName: 'Apex Digital Africa',
-    periodLabel: 'November 2025',
-    currency: '₦',
-    estimatedRevenue: 5000000, // ₦5M
-    stages: [
-      {
-        id: 'awareness',
-        label: 'Website Visitors',
-        input: 10000,
-        output: 3000,
-        targetConversion: 0.35,
-      },
-      {
-        id: 'interest',
-        label: 'Lead Magnets Downloaded',
-        input: 3000,
-        output: 1500,
-        targetConversion: 0.6,
-      },
-      {
-        id: 'consideration',
-        label: 'Discovery Call Booked',
-        input: 1500,
-        output: 600,
-        targetConversion: 0.5,
-      },
-      {
-        id: 'intent',
-        label: 'Proposal Sent',
-        input: 600,
-        output: 300,
-        targetConversion: 0.6,
-      },
-      {
-        id: 'evaluation',
-        label: 'Negotiation',
-        input: 300,
-        output: 200,
-        targetConversion: 0.7,
-      },
-      {
-        id: 'purchase',
-        label: 'Deals Closed',
-        input: 200,
-        output: 100,
-        targetConversion: 0.6,
-      },
-    ],
-  });
+  const [funnelData, setFunnelData] = useState<FunnelSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-black text-white mb-2">
-            Funnel Analysis Dashboard
-          </h1>
-          <p className="text-slate-400 text-lg">
-            Real-time diagnostic of how efficiently you turn attention into revenue
-          </p>
+  const fetchFunnelData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/dashboard-stats?range=30d');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data: ${response.status}`);
+      }
+      
+      const dashboardStats: DashboardStats = await response.json();
+      console.log('📊 Raw dashboard data:', dashboardStats);
+      
+      // Transform to funnel format
+      const transformedData = transformToFunnelStages(dashboardStats);
+      console.log('🔄 Transformed funnel data:', transformedData);
+      
+      setFunnelData(transformedData);
+      
+    } catch (error) {
+      console.error('❌ Failed to fetch funnel data:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFunnelData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-24 h-24 border-t-4 border-b-4 border-cyan-500 rounded-full animate-spin mx-auto mb-6"></div>
+            <Sparkles className="w-8 h-8 text-cyan-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+          </div>
+          <p className="text-cyan-200 font-semibold text-lg animate-pulse">Loading Funnel Analysis...</p>
+          <p className="text-cyan-300/60 text-sm mt-2">Analyzing your growth data</p>
         </div>
+      </div>
+    );
+  }
 
-        {/* Scorecard */}
-        <FunnelScorecard snapshot={snapshot} />
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-10 max-w-md border border-white/20">
+          <div className="text-red-400 text-6xl mb-6 text-center">⚠️</div>
+          <h3 className="text-2xl font-bold text-white mb-3 text-center">
+            Failed to Load Funnel Data
+          </h3>
+          <p className="text-blue-200 text-center mb-6">{error}</p>
+          <div className="space-y-3">
+            <button
+              onClick={fetchFunnelData}
+              className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-cyan-500 hover:to-blue-500 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-5 h-5" />
+              Retry Loading
+            </button>
+            <button
+              onClick={() => window.location.href = '/dashboard'}
+              className="w-full bg-white/10 text-white px-6 py-4 rounded-xl font-semibold hover:bg-white/20 transition-all border border-white/20 flex items-center justify-center gap-2"
+            >
+              ← Back to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-        {/* Additional Actions */}
-        <div className="mt-8 flex flex-wrap gap-4 justify-center">
-          <button className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold px-6 py-3 rounded-xl transition-all hover:scale-105">
-            <RefreshCw className="w-4 h-4" />
-            Refresh Data
-          </button>
-          <button className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold px-6 py-3 rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-500/25">
-            <Download className="w-4 h-4" />
-            Download Full Report
+  if (!funnelData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl p-10 max-w-md border border-white/20 text-center">
+          <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+          <h3 className="text-2xl font-bold text-white mb-3">No Data Available</h3>
+          <p className="text-blue-200 mb-6">Unable to generate funnel analysis from current data</p>
+          <button
+            onClick={() => window.location.href = '/dashboard'}
+            className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-cyan-500 hover:to-blue-500 transition-all"
+          >
+            ← Back to Dashboard
           </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <FunnelScorecard snapshot={funnelData} />;
 }
