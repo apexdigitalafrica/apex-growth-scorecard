@@ -29,9 +29,10 @@ import {
   Eye,
   X,
   Lock, 
-  Shield 
-  Award 
+  Shield,
+  Award // ← ADD THIS LINE!
 } from 'lucide-react';
+
 import AIGrowthChatbot from '@/components/AIGrowthChatbot';
 
 // Types & Interfaces
