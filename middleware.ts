@@ -2,13 +2,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// ✅ Get password from environment variable
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'ApexDashboard2025!';
 
-// ✅ Rate limiting to prevent brute force
+// Rate limiting
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const MAX_ATTEMPTS = 5;
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000;
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
@@ -28,11 +27,10 @@ function checkRateLimit(ip: string): boolean {
 }
 
 export function middleware(request: NextRequest) {
-  // ✅ Only protect dashboard routes
+  // ✅ ONLY protect /dashboard routes - NOT homepage or scorecard!
   if (request.nextUrl.pathname.startsWith('/dashboard')) {
     const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
     
-    // ✅ Check rate limit first
     if (!checkRateLimit(ip)) {
       return new NextResponse(
         JSON.stringify({ 
@@ -56,12 +54,8 @@ export function middleware(request: NextRequest) {
         const [user, password] = atob(basicAuth).split(':');
 
         if (password === DASHBOARD_PASSWORD) {
-          // ✅ Log successful access (optional - add to analytics)
           console.log(`✅ Dashboard access: ${ip} at ${new Date().toISOString()}`);
-          
-          // ✅ Reset rate limit on success
           rateLimitMap.delete(ip);
-          
           return NextResponse.next();
         }
       } catch (error) {
@@ -69,7 +63,6 @@ export function middleware(request: NextRequest) {
       }
     }
 
-    // ✅ Log failed attempt
     console.warn(`⚠️ Failed dashboard access: ${ip} at ${new Date().toISOString()}`);
 
     return new NextResponse(
@@ -86,12 +79,13 @@ export function middleware(request: NextRequest) {
     );
   }
 
+  // ✅ Allow all other routes to pass through
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
+    '/dashboard/:path*',  //
     '/api/dashboard-stats/:path*',  
   ],
 };

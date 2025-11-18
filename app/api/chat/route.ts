@@ -1,22 +1,19 @@
 // app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-// CRITICAL: Use Edge runtime for external fetch() calls (required by Vercel + Claude)
 export const runtime = 'edge';
-
-// Optional: Faster region for Anthropic API
-export const preferredRegion = 'iad1'; // Washington D.C. – closest & fastest
+export const preferredRegion = 'iad1';
 
 export async function POST(request: NextRequest) {
   const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-  // Debug (remove later if you want)
-  console.log('Anthropic key exists:', !!ANTHROPIC_API_KEY);
-
   if (!ANTHROPIC_API_KEY) {
+    console.error('❌ ANTHROPIC_API_KEY not found in environment');
     return NextResponse.json(
-      { error: 'Anthropic API key not configured' },
-      { status: 500 }
+      { 
+        response: "I apologize, but I'm temporarily unavailable. Please email us at info@apexdigitalafrica.com or try again in a moment." 
+      },
+      { status: 200 }
     );
   }
 
@@ -40,7 +37,7 @@ Strongest area: ${
 Mode: ${context.mode || 'scorecard'}`
       : 'General inquiry';
 
-    const userContent = `${contextString}\n\nUser message: ${message}`;
+    console.log('📤 Sending to Claude:', { messageLength: message.length, hasContext: !!context });
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -50,15 +47,28 @@ Mode: ${context.mode || 'scorecard'}`
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-haiku-20240307', // Fast + cheap, perfect for chat
-        max_tokens: 512,
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 1024,  // ✅ Increased for better responses
         temperature: 0.7,
-        system:
-          'You are an expert AI Growth Consultant for Apex Digital Africa. Be professional, helpful, concise, and action-oriented. Use African business context when relevant. Speak confidently but warmly. Use bullet points and emojis sparingly.',
+        system: `You are an expert AI Growth Consultant for Apex Digital Africa. 
+
+Your role:
+- Help African businesses improve their digital marketing
+- Provide specific, actionable advice
+- Be warm, professional, and encouraging
+- Use African business context when relevant
+- Keep responses concise but valuable
+- Use emojis sparingly (1-2 per response)
+- Always end with a clear next step
+
+When users share their scorecard results, focus on:
+1. Their weakest dimension (biggest opportunity)
+2. Quick wins they can implement today
+3. How to reach the next growth stage`,
         messages: [
           {
             role: 'user',
-            content: userContent,
+            content: `${contextString}\n\nUser: ${message}`,
           },
         ],
       }),
@@ -66,22 +76,34 @@ Mode: ${context.mode || 'scorecard'}`
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Anthropic API error:', response.status, errorText);
-      throw new Error(`Anthropic API error: ${response.status}`);
+      console.error('❌ Anthropic API error:', response.status, errorText);
+      
+      // Better error messages
+      if (response.status === 401) {
+        throw new Error('Invalid API key');
+      } else if (response.status === 429) {
+        throw new Error('Rate limit exceeded');
+      } else {
+        throw new Error(`API error: ${response.status}`);
+      }
     }
 
     const data = await response.json();
     const aiResponse = data.content[0].text;
 
+    console.log('✅ Claude responded successfully');
+
     return NextResponse.json({ response: aiResponse });
+
   } catch (error) {
-    console.error('Chat API error:', error);
+    console.error('💥 Chat API error:', error);
+    
+    // Graceful fallback
     return NextResponse.json(
       {
-        response:
-          "I'm having trouble connecting right now. Please try again in a moment or email us at info@apexdigitalafrica.com",
+        response: "I'm having trouble connecting right now. 😔\n\nWhile I get back online, you can:\n📧 Email: hello@apexdigitalafrica@apexdigitalafrica.com\n📞 WhatsApp: +1(555)8900637\n📅 Book a call: https://calendly.com/apexdigitalafrica\n\nI'll be back shortly!"
       },
-      { status: 200 } // Return 200 so chatbot shows fallback message gracefully
+      { status: 200 }
     );
   }
 }
