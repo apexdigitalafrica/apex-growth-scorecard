@@ -272,7 +272,8 @@ export default function Dashboard() {
         </div>
       </nav>
 
-   <div className="relative z-10 max-w-[1600px] mx-auto p-6 lg:p-8">
+ <div className="relative z-10 max-w-[1600px] mx-auto p-6 lg:p-8">
+  {/* Quick Access Cards */}
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
     {/* Growth Scorecard Overview */}
     <Link
@@ -304,7 +305,6 @@ export default function Dashboard() {
       </div>
     </Link>
   </div>
-</div>
         
         {/* Header Section with Glassmorphism */}
         <div className="mb-8">
