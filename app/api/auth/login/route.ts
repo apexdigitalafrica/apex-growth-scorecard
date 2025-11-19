@@ -4,7 +4,9 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, loginType } = await request.json()
+    const { email, password, loginType = 'client' } = await request.json()
+
+    console.log('🔐 Login attempt for:', email, 'Type:', loginType)
 
     if (!email || !password) {
       return NextResponse.json(
@@ -13,51 +15,94 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔐 Login attempt for:', email, 'Type:', loginType)
-
     let authEmail = email;
-    
+    let username = null;
+
     // Handle username login for admins
     if (loginType === 'admin' && !email.includes('@')) {
       console.log('🔄 Admin username detected, looking up email...')
       
-      // Look up the email from username in admin_users table
       const { data: adminUser, error: adminLookupError } = await supabaseAdmin
         .from('admin_users')
         .select('email, username')
         .eq('username', email)
         .single()
 
-      if (adminLookupError || !adminUser) {
-        console.error('❌ Admin username not found:', email)
-        return NextResponse.json(
-          { error: 'Invalid username or password' },
-          { status: 401 }
-        )
+      if (!adminLookupError && adminUser) {
+        authEmail = adminUser.email;
+        username = email;
+        console.log('✅ Found email for username:', authEmail)
       }
-
-      authEmail = adminUser.email;
-      console.log('✅ Found email for username:', authEmail)
     }
 
-    // Authenticate with Supabase using the resolved email
+    // Authenticate with Supabase
+    console.log('🔐 Attempting Supabase auth with:', authEmail)
     const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
       email: authEmail,
       password,
     })
 
+    // If authentication fails, try to create user
+    if (authError && authError.message.includes('Invalid login credentials')) {
+      console.log('🔄 Authentication failed, attempting to create user...')
+      
+      const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.signUp({
+        email: authEmail,
+        password,
+      })
+
+      if (signUpError) {
+        console.error('❌ Sign up error:', signUpError.message)
+        return NextResponse.json(
+          { error: 'Invalid credentials and cannot create account' },
+          { status: 401 }
+        )
+      }
+
+      if (!signUpData.user) {
+        return NextResponse.json(
+          { error: 'Account creation failed' },
+          { status: 401 }
+        )
+      }
+
+      console.log('✅ User created successfully, ID:', signUpData.user.id)
+
+      // AUTO-CREATE ADMIN USER IN admin_users TABLE
+      if (loginType === 'admin') {
+        const { error: insertError } = await supabaseAdmin
+          .from('admin_users')
+          .insert({
+            id: signUpData.user.id,
+            email: signUpData.user.email!,
+            username: username || 'admin',
+            full_name: signUpData.user.email!.split('@')[0],
+            permissions: ['read', 'write', 'manage', 'admin']
+          })
+
+        if (insertError) {
+          console.error('❌ Failed to create admin user:', insertError.message)
+        } else {
+          console.log('✅ Admin user created in admin_users table')
+        }
+      }
+
+      // Return the newly created user
+      const userData = {
+        id: signUpData.user.id,
+        email: signUpData.user.email!,
+        full_name: signUpData.user.email!.split('@')[0],
+        role: loginType as 'admin' | 'client',
+        permissions: loginType === 'admin' ? ['read', 'write', 'manage', 'admin'] : undefined
+      }
+
+      return NextResponse.json({ user: userData })
+    }
+
     if (authError) {
       console.error('❌ Authentication error:', authError.message)
-      
-      // Better error messages based on login type
-      const errorMessage = loginType === 'admin' && !email.includes('@') 
-        ? 'Invalid username or password'
-        : authError.message.includes('Invalid login credentials')
-        ? 'Invalid email/username or password'
-        : authError.message;
-
       return NextResponse.json(
-        { error: errorMessage },
+        { error: 'Invalid email/username or password' },
         { status: 401 }
       )
     }
@@ -70,6 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Supabase auth successful, checking user type...')
+
 
     // Check if user exists in admin_users table (admins)
     const { data: adminUser, error: adminError } = await supabaseAdmin
