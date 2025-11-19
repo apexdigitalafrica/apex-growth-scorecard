@@ -79,14 +79,12 @@ type TimeRange = '7d' | '30d' | '90d' | 'all';
 type LeadFilter = 'all' | 'hot' | 'warm' | 'cold';
 
 export default function Dashboard() {
-  // ✅ Hooks inside component
   const { logout } = useAuthStore();
   const router = useRouter();
 
-  // ✅ Functions inside component
   const handleLogout = () => {
     logout();
-    router.push('/client-portal/login');
+    router.push('/login');
   };
 
   // State Management
