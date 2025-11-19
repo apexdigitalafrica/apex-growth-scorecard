@@ -63,7 +63,6 @@ export default function ClientDashboard() {
   const [dataLoading, setDataLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [notifications, setNotifications] = useState(3);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Show loading while checking auth
   if (isLoading || !isAuthenticated || user?.role !== 'client') {
@@ -71,12 +70,13 @@ export default function ClientDashboard() {
   }
 
   const clientUser = user;
+  const primaryColor = clientUser.client.primary_color || '#0066CC';
+  const secondaryColor = clientUser.client.primary_color ? `${clientUser.client.primary_color}80` : '#004499';
 
   useEffect(() => {
     const loadClientData = async () => {
       setDataLoading(true);
       
-      // Simulate API call with more realistic data
       setTimeout(() => {
         setStats({
           averageScore: 89,
@@ -169,11 +169,10 @@ export default function ClientDashboard() {
             {/* Brand Section */}
             <div className="flex items-center gap-4">
               <div 
-                className="relative group"
+                className="relative group h-12 w-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform duration-300"
                 style={{ 
-                  background: `linear-gradient(135deg, ${clientUser.client.primary_color || '#0066CC'}, ${clientUser.client.primary_color ? `${clientUser.client.primary_color}80` : '#004499'})` 
+                  background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` 
                 }}
-                className="h-12 w-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform duration-300"
               >
                 {clientUser.client.company_name.substring(0, 2).toUpperCase()}
                 <div className="absolute inset-0 rounded-2xl bg-white/20 group-hover:bg-white/30 transition-colors"></div>
@@ -488,6 +487,7 @@ function EliteLoadingScreen({ companyName }: { companyName: string }) {
     </div>
   );
 }
+
 
 // Supporting Components
 function QuickStat({ label, value, trend, change, icon }: any) {
