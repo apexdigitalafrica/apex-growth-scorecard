@@ -5,9 +5,8 @@ export const runtime = 'nodejs';
 
 
 // THIS KILLS THE ERROR FOREVER
+// ADD THIS AT THE VERY TOP (after 'use client' if exists)
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { 
