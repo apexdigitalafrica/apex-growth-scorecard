@@ -1,4 +1,4 @@
-// app/api/auth/login/route.ts - SECURE VERSION
+// app/api/auth/login/route.ts - Refined Secure Version
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
@@ -15,12 +15,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let authEmail = email;
+    let authEmail = email
 
-    // Handle username login for admins
+    // Handle admin username login by looking up email
     if (loginType === 'admin' && !email.includes('@')) {
       console.log('🔄 Admin username detected, looking up email...')
-      
+
       const { data: adminUser, error: adminLookupError } = await supabaseAdmin
         .from('admin_users')
         .select('email, username')
@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      authEmail = adminUser.email;
+      authEmail = adminUser.email
       console.log('✅ Found email for username:', authEmail)
     }
 
-    // Authenticate with Supabase - NO AUTO-CREATE!
+    // Authenticate with Supabase Auth
     console.log('🔐 Attempting Supabase auth with:', authEmail)
     const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
       email: authEmail,
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     if (authError) {
       console.error('❌ Authentication error:', authError.message)
       return NextResponse.json(
-        { error: 'Invalid email/username or password' },
+        { error: 'Invalid email or password' },
         { status: 401 }
       )
     }
@@ -61,34 +61,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('✅ Supabase auth successful, checking user type...')
-
-    // Check if user exists in admin_users table (admins)
+    // Check if user is admin by permissions
     const { data: adminUser, error: adminError } = await supabaseAdmin
       .from('admin_users')
-      .select('*')
+      .select('full_name, permissions, username')
       .eq('id', authData.user.id)
       .single()
 
-    if (!adminError && adminUser) {
+    if (!adminError && adminUser && adminUser.permissions?.includes('admin')) {
       console.log('👑 Admin user detected:', adminUser.email)
       const userData = {
         id: authData.user.id,
         email: authData.user.email!,
         full_name: adminUser.full_name,
         role: 'admin' as const,
-        permissions: adminUser.permissions || ['read', 'write', 'manage'],
+        permissions: adminUser.permissions,
         username: adminUser.username
       }
       return NextResponse.json({ user: userData })
     }
 
-    // Check if user exists in client_users table (clients)
+    // Check if user is client
     const { data: clientUser, error: clientError } = await supabaseAdmin
       .from('client_users')
       .select(`
-        *,
-        clients (*)
+        full_name,
+        clients (company_name, primary_color, logo_url)
       `)
       .eq('id', authData.user.id)
       .single()
@@ -111,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     console.error('❌ User not found in admin_users or client_users tables')
     
-    // SECURE: No auto-creation - user must be pre-registered
+    // No auto-creation - must be pre-registered
     return NextResponse.json(
       { error: 'Account not found. Please contact support to create an account.' },
       { status: 403 }
