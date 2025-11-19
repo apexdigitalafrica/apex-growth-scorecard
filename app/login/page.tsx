@@ -64,9 +64,9 @@ export default function Login() {
   }
 
   const handleAdminRequest = () => {
-    // Redirect to admin request page or open contact modal
-    window.open('mailto:support@apexdigitalafrica.com?subject=Admin%20Access%20Request&body=Please%20provide%20details%20about%20your%20request%20for%20admin%20access.', '_blank')
-  }
+  // Redirect to admin request page or open contact modal
+  window.open('mailto:support@apexdigitalafrica.com?subject=Admin%20Access%20Request&body=Please%20provide%20details%20about%20your%20request%20for%20admin%20access.', '_blank')
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
