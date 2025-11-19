@@ -1,12 +1,18 @@
-// lib/supabaseAdmin.ts
+// lib/supabaseAdmin.ts - FIXED VERSION
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 let supabaseAdmin: SupabaseClient | null = null;
 
-// Only initialize if we're in a runtime context (not build time)
-// and environment variables are available
+// Use the EXACT environment variable names from your Vercel dashboard
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+console.log('🔧 Supabase init - Environment check:', {
+  hasUrl: !!supabaseUrl,
+  hasServiceKey: !!serviceRoleKey,
+  url: supabaseUrl ? '***' + supabaseUrl.slice(-10) : 'missing',
+  serviceKey: serviceRoleKey ? '***' + serviceRoleKey.slice(-10) : 'missing'
+});
 
 if (supabaseUrl && serviceRoleKey) {
   supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
@@ -15,13 +21,12 @@ if (supabaseUrl && serviceRoleKey) {
       autoRefreshToken: false,
     },
   });
+  console.log('✅ Supabase admin client initialized successfully');
 } else {
-  // Only show warning in development, not during production builds
-  if (process.env.NODE_ENV === 'development') {
-    console.warn(
-      'Supabase admin not initialised: missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY'
-    );
-  }
+  console.error('❌ Supabase admin client NOT initialized. Missing:', {
+    url: !supabaseUrl,
+    serviceKey: !serviceRoleKey
+  });
 }
 
 export { supabaseAdmin };
