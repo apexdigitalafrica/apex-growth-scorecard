@@ -4,27 +4,60 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { email, password, loginType } = await request.json()
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'Email/username and password are required' },
         { status: 400 }
       )
     }
 
-    console.log('🔐 Login attempt for:', email)
+    console.log('🔐 Login attempt for:', email, 'Type:', loginType)
 
-    // Authenticate with Supabase
+    let authEmail = email;
+    
+    // Handle username login for admins
+    if (loginType === 'admin' && !email.includes('@')) {
+      console.log('🔄 Admin username detected, looking up email...')
+      
+      // Look up the email from username in admin_users table
+      const { data: adminUser, error: adminLookupError } = await supabaseAdmin
+        .from('admin_users')
+        .select('email, username')
+        .eq('username', email)
+        .single()
+
+      if (adminLookupError || !adminUser) {
+        console.error('❌ Admin username not found:', email)
+        return NextResponse.json(
+          { error: 'Invalid username or password' },
+          { status: 401 }
+        )
+      }
+
+      authEmail = adminUser.email;
+      console.log('✅ Found email for username:', authEmail)
+    }
+
+    // Authenticate with Supabase using the resolved email
     const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
-      email,
+      email: authEmail,
       password,
     })
 
     if (authError) {
       console.error('❌ Authentication error:', authError.message)
+      
+      // Better error messages based on login type
+      const errorMessage = loginType === 'admin' && !email.includes('@') 
+        ? 'Invalid username or password'
+        : authError.message.includes('Invalid login credentials')
+        ? 'Invalid email/username or password'
+        : authError.message;
+
       return NextResponse.json(
-        { error: authError.message },
+        { error: errorMessage },
         { status: 401 }
       )
     }
