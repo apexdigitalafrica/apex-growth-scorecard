@@ -21,13 +21,22 @@ function ResetPasswordInner() {
 
   // Check if we have a valid reset token
   useEffect(() => {
-    const token = searchParams.get('token')
-    const type = searchParams.get('type')
+  let token = searchParams.get('token')
+  let type = searchParams.get('type')
 
-    if (type !== 'recovery' || !token) {
-      setError('Invalid or expired reset link. Please request a new password reset.')
+  if ((!token || !type) && typeof window !== 'undefined') {
+    const hash = window.location.hash
+    if (hash) {
+      const hashParams = new URLSearchParams(hash.replace(/^#/, ''))
+      token = token ?? hashParams.get('access_token')
+      type = type ?? hashParams.get('type')
     }
-  }, [searchParams])
+  }
+
+  if (type !== 'recovery' || !token) {
+    setError('Invalid or expired reset link. Please request a new password reset.')
+  }
+}, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

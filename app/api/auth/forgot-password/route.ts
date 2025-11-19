@@ -5,7 +5,7 @@ import { sendBrevoEmail } from '@/lib/brevo'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
+    const { email, redirectTo } = await request.json()
 
     console.log('🔐 Forgot password request for:', email)
 
@@ -16,17 +16,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Decide where Supabase should redirect the user after clicking the email link
+    const fallbackBaseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ??
+      process.env.NEXTAUTH_URL ??
+      'http://localhost:3000'
+
+    const finalRedirectTo =
+      redirectTo || `${fallbackBaseUrl}/reset-password`
+
+    console.log('🔗 Using redirectTo:', finalRedirectTo)
+
     // Generate reset token with Supabase
-    const { data, error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXTAUTH_URL}/reset-password`,
-    })
+    const { data, error } = await supabaseAdmin.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: finalRedirectTo,
+      }
+    )
 
     if (error) {
       console.error('❌ Password reset error:', error.message)
-      
+
       // Don't reveal if email exists or not for security
       return NextResponse.json(
-        { error: 'If an account with that email exists, a reset link has been sent.' },
+        {
+          error:
+            'If an account with that email exists, a reset link has been sent.',
+        },
         { status: 200 } // Always return 200 for security
       )
     }
@@ -38,7 +55,7 @@ export async function POST(request: NextRequest) {
       await sendBrevoEmail({
         sender: {
           name: 'Apex Growth Portal',
-          email: 'notifications@apexdigitalafrica.com'
+          email: 'notifications@apexdigitalafrica.com',
         },
         to: [{ email, name: 'User' }],
         subject: 'Password Reset Request - Apex Growth Portal',
@@ -85,23 +102,29 @@ export async function POST(request: NextRequest) {
               </div>
             </body>
           </html>
-        `
+        `,
       })
       console.log('✅ Brevo notification email sent')
     } catch (emailError) {
-      console.error('❌ Brevo email failed, but Supabase reset was sent:', emailError)
+      console.error(
+        '❌ Brevo email failed, but Supabase reset was sent:',
+        emailError
+      )
     }
 
     // Always return success for security (don't reveal if email exists)
-    return NextResponse.json({ 
-      success: true, 
-      message: 'If an account with that email exists, a reset link has been sent.'
+    return NextResponse.json({
+      success: true,
+      message:
+        'If an account with that email exists, a reset link has been sent.',
     })
-
   } catch (error) {
     console.error('🚨 Forgot password error:', error)
     return NextResponse.json(
-      { error: 'If an account with that email exists, a reset link has been sent.' },
+      {
+        error:
+          'If an account with that email exists, a reset link has been sent.',
+      },
       { status: 200 } // Always return 200 for security
     )
   }

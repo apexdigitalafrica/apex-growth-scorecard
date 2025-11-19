@@ -18,12 +18,18 @@ export default function ForgotPassword() {
     setError('')
 
     try {
+      // Build the URL Supabase should redirect back to after clicking the email link
+      const redirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/reset-password`
+          : `${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/reset-password`
+
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, redirectTo }),
       })
 
       const data = await response.json()
