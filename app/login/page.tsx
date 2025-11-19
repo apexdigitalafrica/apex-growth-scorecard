@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/lib/session-client'
 import { Building2, User, Shield, Mail, Lock, ArrowRight, Plus, HelpCircle, Eye, EyeOff, Sparkles, CheckCircle2 } from 'lucide-react'
 
@@ -17,6 +18,9 @@ export default function Login() {
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
   const { login } = useAuthStore()
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next')
+
 
   useEffect(() => {
     setMounted(true)
@@ -50,34 +54,34 @@ export default function Login() {
     login(data.user)
 
     // Determine user role, fallback to permissions / client
-    const userRole: 'admin' | 'client' =
-      data.user.role ??
-      (data.user.permissions?.includes('admin') ? 'admin' : 'client')
+   // Determine user role, fallback to permissions / client
+const userRole: 'admin' | 'client' =
+  data.user.role ??
+  (data.user.permissions?.includes('admin') ? 'admin' : 'client')
 
-    console.log('✅ Login success:', {
-      email,
-      loginType,
-      userRole,
-    })
+console.log('✅ Login success:', {
+  email,
+  loginType,
+  userRole,
+  next,
+})
 
-    // Give the store a tick to update, then redirect
-    setTimeout(() => {
-      if (userRole === 'admin') {
-        router.replace('/dashboard')
-      } else if (userRole === 'client') {
-        router.replace('/client-portal/dashboard')
-      } else {
-        // Extra safety fallback (should rarely be hit)
-        router.replace('/dashboard')
-      }
-    }, 50)
-  } catch (err) {
-    console.error('❌ Login error:', err)
-    setError(err instanceof Error ? err.message : 'An error occurred')
-  } finally {
-    setLoading(false)
+// Give the store a tick to update, then redirect
+setTimeout(() => {
+  // If there is a ?next= param, always honour it
+  if (next) {
+    router.replace(next)
+    return
   }
-}
+
+  if (userRole === 'admin') {
+    router.replace('/dashboard')
+  } else if (userRole === 'client') {
+    router.replace('/client-portal/dashboard')
+  } else {
+    router.replace('/dashboard')
+  }
+}, 50)
 
 
   const handleClientSignup = () => {

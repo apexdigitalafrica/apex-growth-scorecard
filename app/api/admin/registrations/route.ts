@@ -1,77 +1,93 @@
 // app/api/admin/registrations/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
-// GET  /api/admin/registrations
+type RegistrationStatus = 'pending' | 'approved' | 'rejected'
+
+/**
+ * GET /api/admin/registrations
+ * List all client registration requests
+ */
 export async function GET() {
   try {
     const { data, error } = await supabaseAdmin
       .from('client_registration_requests')
       .select('*')
-      .order('requested_at', { ascending: false });
+      .order('requested_at', { ascending: false })
 
-    if (error) {
-      console.error('Error loading registration requests:', error.message);
-      return NextResponse.json(
-        { error: 'Failed to load registration requests' },
-        { status: 500 },
-      );
-    }
+    if (error) throw error
 
-    return NextResponse.json({ requests: data ?? [] });
+    return NextResponse.json({
+      requests: data ?? [],
+    })
   } catch (err) {
-    console.error('GET /admin/registrations error:', err);
+    console.error('❌ Error loading registration requests', err)
     return NextResponse.json(
       { error: 'Failed to load registration requests' },
       { status: 500 },
-    );
+    )
   }
 }
 
-// PATCH /api/admin/registrations  { id, action: 'approve' | 'reject', adminId? }
+/**
+ * PATCH /api/admin/registrations
+ * Body: { id, action: "approve" | "reject", adminId }
+ */
 export async function PATCH(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { id, action, adminId } = body as {
-      id?: string;
-      action?: 'approve' | 'reject';
-      adminId?: string | null;
-    };
+    const { id, action, adminId } = await req.json()
 
-    if (!id || (action !== 'approve' && action !== 'reject')) {
+    if (!id || !action || !adminId) {
       return NextResponse.json(
-        { error: 'Invalid request payload' },
+        { error: 'Missing id, action or adminId' },
         { status: 400 },
-      );
+      )
     }
 
-    const status = action === 'approve' ? 'approved' : 'rejected';
+    if (action !== 'approve' && action !== 'reject') {
+      return NextResponse.json(
+        { error: 'Invalid action' },
+        { status: 400 },
+      )
+    }
+
+    // 🔐 Simple server-side admin check using admin_users table
+    const { data: admin, error: adminError } = await supabaseAdmin
+      .from('admin_users')
+      .select('id, role')
+      .eq('id', adminId)
+      .single()
+
+    if (adminError || !admin) {
+      console.error('❌ Admin auth failed', adminError)
+      return NextResponse.json(
+        { error: 'Not authorised to perform this action' },
+        { status: 403 },
+      )
+    }
+
+    const newStatus: RegistrationStatus =
+      action === 'approve' ? 'approved' : 'rejected'
 
     const { data, error } = await supabaseAdmin
       .from('client_registration_requests')
       .update({
-        status,
+        status: newStatus,
         reviewed_at: new Date().toISOString(),
-        reviewed_by: adminId ?? null,
+        reviewed_by: adminId,
       })
       .eq('id', id)
-      .select()
-      .single();
+      .select('*')
+      .single()
 
-    if (error) {
-      console.error('Error updating registration request:', error.message);
-      return NextResponse.json(
-        { error: 'Failed to update registration request' },
-        { status: 500 },
-      );
-    }
+    if (error) throw error
 
-    return NextResponse.json({ request: data });
+    return NextResponse.json({ request: data })
   } catch (err) {
-    console.error('PATCH /admin/registrations error:', err);
+    console.error('❌ Error updating registration request', err)
     return NextResponse.json(
-      { error: 'Failed to perform authorization check. Please try again later.' },
+      { error: 'Failed to update request status' },
       { status: 500 },
-    );
+    )
   }
 }
