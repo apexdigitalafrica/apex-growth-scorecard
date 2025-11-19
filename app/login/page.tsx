@@ -83,6 +83,14 @@ setTimeout(() => {
   }
 }, 50)
 
+  } catch (err) {
+    console.error('❌ Login error:', err)
+    setError(err instanceof Error ? err.message : 'An error occurred')
+  } finally {
+    setLoading(false)
+  }
+}
+
 
   const handleClientSignup = () => {
     router.push('/register/client')
