@@ -1,12 +1,14 @@
 // app/reset-password/page.tsx
 'use client'
+
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Lock, Shield, CheckCircle, Eye, EyeOff } from 'lucide-react'
 
-export default function ResetPassword() {
+function ResetPasswordInner() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,7 +23,7 @@ export default function ResetPassword() {
   useEffect(() => {
     const token = searchParams.get('token')
     const type = searchParams.get('type')
-    
+
     if (type !== 'recovery' || !token) {
       setError('Invalid or expired reset link. Please request a new password reset.')
     }
@@ -46,14 +48,12 @@ export default function ResetPassword() {
 
     try {
       // Supabase handles the password reset automatically when the user lands on this page
-      // We just need to ensure they submit a matching password
       setSuccess(true)
-      
+
       // Redirect to login after success
       setTimeout(() => {
         router.push('/login')
       }, 3000)
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
@@ -197,5 +197,21 @@ export default function ResetPassword() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <div className="text-center text-gray-600 text-sm">
+            Preparing secure reset page...
+          </div>
+        </div>
+      }
+    >
+      <ResetPasswordInner />
+    </Suspense>
   )
 }
