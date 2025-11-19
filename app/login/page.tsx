@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/session-client'
-import { Building2, User, Shield, Mail, Lock, ArrowRight } from 'lucide-react'
+import { Building2, User, Shield, Mail, Lock, ArrowRight, Plus, HelpCircle } from 'lucide-react'
 
 type LoginType = 'client' | 'admin';
 
@@ -31,7 +31,7 @@ export default function Login() {
         body: JSON.stringify({ 
           email, 
           password,
-          loginType // Send login type to API
+          loginType
         }),
       })
 
@@ -56,6 +56,16 @@ export default function Login() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleClientSignup = () => {
+    // Redirect to client registration page
+    router.push('/register/client')
+  }
+
+  const handleAdminRequest = () => {
+    // Redirect to admin request page or open contact modal
+    window.open('mailto:support@apexdigitalafrica.com?subject=Admin%20Access%20Request&body=Please%20provide%20details%20about%20your%20request%20for%20admin%20access.', '_blank')
   }
 
   return (
@@ -204,8 +214,31 @@ export default function Login() {
             </button>
           </div>
 
+          {/* Registration Links */}
+          <div className="grid grid-cols-1 gap-3 pt-4 border-t border-gray-200">
+            {/* Client Registration */}
+            <button
+              type="button"
+              onClick={handleClientSignup}
+              className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 border-blue-200 text-blue-700 rounded-xl hover:bg-blue-50 transition-all duration-200 group"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="font-medium">Create Client Account</span>
+            </button>
+
+            {/* Admin Access Request */}
+            <button
+              type="button"
+              onClick={handleAdminRequest}
+              className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 border-purple-200 text-purple-700 rounded-xl hover:bg-purple-50 transition-all duration-200 group"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span className="font-medium">Request Admin Access</span>
+            </button>
+          </div>
+
           {/* Help Text */}
-          <div className="text-center">
+          <div className="text-center pt-2">
             <p className="text-xs text-gray-500">
               {loginType === 'admin' 
                 ? 'Use your Apex team credentials'
@@ -214,6 +247,20 @@ export default function Login() {
             </p>
           </div>
         </form>
+
+        {/* Support Link */}
+        <div className="text-center pt-4">
+          <div className="text-sm text-gray-600">
+            Need help?{' '}
+            <a 
+              href="mailto:support@apexdigitalafrica.com" 
+              className="text-blue-600 hover:text-blue-500 font-medium inline-flex items-center gap-1"
+            >
+              Contact support
+              <HelpCircle className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   )
