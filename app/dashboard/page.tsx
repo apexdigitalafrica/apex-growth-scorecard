@@ -3,6 +3,11 @@
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+
+// THIS KILLS THE ERROR FOREVER
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { 
