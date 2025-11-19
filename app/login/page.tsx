@@ -1,97 +1,115 @@
 'use client'
-export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/lib/session-client'
-import { Building2, User, Shield, Mail, Lock, ArrowRight, Plus, HelpCircle, Eye, EyeOff, Sparkles, CheckCircle2 } from 'lucide-react'
+import {
+  Building2,
+  User,
+  Shield,
+  Mail,
+  Lock,
+  ArrowRight,
+  Plus,
+  HelpCircle,
+  Eye,
+  EyeOff,
+  Sparkles,
+  CheckCircle2,
+} from 'lucide-react'
 
-type LoginType = 'client' | 'admin';
+type LoginType = 'client' | 'admin'
 
-export default function Login() {
-  const [loginType, setLoginType] = useState<LoginType>('client');
+function LoginInner() {
+  const [loginType, setLoginType] = useState<LoginType>('client')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [nextPath, setNextPath] = useState<string | null>(null)
+
   const router = useRouter()
-  const { login } = useAuthStore()
   const searchParams = useSearchParams()
-  const next = searchParams.get('next')
+  const { login, user } = useAuthStore()
 
-
+  // For animation
   useEffect(() => {
     setMounted(true)
   }, [])
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setLoading(true)
-  setError('')
-
-  try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        password,
-        loginType,
-      }),
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Authentication failed')
+  // Read ?next=/... for post-login redirect (e.g. from /admin/registrations)
+  useEffect(() => {
+    const next = searchParams.get('next')
+    if (next) {
+      setNextPath(next)
     }
+  }, [searchParams])
 
-    // Save user in unified store (Zustand)
-    login(data.user)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
-    // Determine user role, fallback to permissions / client
-   // Determine user role, fallback to permissions / client
-const userRole: 'admin' | 'client' =
-  data.user.role ??
-  (data.user.permissions?.includes('admin') ? 'admin' : 'client')
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          loginType,
+        }),
+      })
 
-console.log('✅ Login success:', {
-  email,
-  loginType,
-  userRole,
-  next,
-})
+      const data = await response.json()
 
-// Give the store a tick to update, then redirect
-setTimeout(() => {
-  // If there is a ?next= param, always honour it
-  if (next) {
-    router.replace(next)
-    return
+      if (!response.ok) {
+        throw new Error(data.error || 'Authentication failed')
+      }
+
+      // Save user in unified store (Zustand)
+      login(data.user)
+
+      // Determine user role, fallback to permissions/client
+      const userRole: 'admin' | 'client' =
+        data.user.role ??
+        (data.user.permissions?.includes('admin') ? 'admin' : 'client')
+
+      console.log('✅ Login success:', {
+        email,
+        loginType,
+        userRole,
+        nextPath,
+      })
+
+      // Give store a tick to update, then redirect
+      setTimeout(() => {
+        // If coming from a protected admin page with ?next=/admin/registrations
+        if (userRole === 'admin' && nextPath) {
+          router.replace(nextPath)
+          return
+        }
+
+        if (userRole === 'admin') {
+          router.replace('/dashboard')
+        } else if (userRole === 'client') {
+          router.replace('/client-portal/dashboard')
+        } else {
+          // Safety fallback
+          router.replace('/dashboard')
+        }
+      }, 50)
+    } catch (err) {
+      console.error('❌ Login error:', err)
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
+    }
   }
-
-  if (userRole === 'admin') {
-    router.replace('/dashboard')
-  } else if (userRole === 'client') {
-    router.replace('/client-portal/dashboard')
-  } else {
-    router.replace('/dashboard')
-  }
-}, 50)
-
-  } catch (err) {
-    console.error('❌ Login error:', err)
-    setError(err instanceof Error ? err.message : 'An error occurred')
-  } finally {
-    setLoading(false)
-  }
-}
-
 
   const handleClientSignup = () => {
     router.push('/register/client')
@@ -105,7 +123,7 @@ setTimeout(() => {
     if (!fullName) return
 
     const message = prompt('Please describe why you need admin access:')
-    
+
     try {
       setLoading(true)
       const response = await fetch('/api/auth/admin-request', {
@@ -114,16 +132,21 @@ setTimeout(() => {
         body: JSON.stringify({
           contact_email: userEmail,
           full_name: fullName,
-          message: message || 'No additional details provided'
-        })
+          message: message || 'No additional details provided',
+        }),
       })
 
       const data = await response.json()
-      
+
       if (response.ok) {
-        alert('✅ Admin access request submitted successfully! We will contact you shortly.')
+        alert(
+          '✅ Admin access request submitted successfully! We will contact you shortly.'
+        )
       } else {
-        alert('❌ Failed to submit request: ' + (data.error || 'Please try again or contact support.'))
+        alert(
+          '❌ Failed to submit request: ' +
+            (data.error || 'Please try again or contact support.')
+        )
       }
     } catch (error) {
       alert('❌ Failed to submit request. Please try again or contact support.')
@@ -136,8 +159,8 @@ setTimeout(() => {
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       {/* Animated Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bS0yIDB2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0tMiAwdjJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
-        
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bS0yIDB2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0tMiAwdjJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
+
         {/* Animated Orbs */}
         <div className="absolute top-0 -left-4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
         <div className="absolute top-0 -right-4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
@@ -145,14 +168,18 @@ setTimeout(() => {
       </div>
 
       {/* Main Content */}
-      <div className={`max-w-md w-full space-y-8 relative z-10 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+      <div
+        className={`max-w-md w-full space-y-8 relative z-10 transition-all duration-1000 ${
+          mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        }`}
+      >
         {/* Glassmorphism Card */}
         <div className="backdrop-blur-xl bg-white/10 rounded-3xl shadow-2xl border border-white/20 p-8 relative overflow-hidden group hover:shadow-purple-500/20 transition-all duration-500">
           {/* Glow Effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          
+
           <div className="relative z-10">
-            {/* Header */}                                    
+            {/* Header */}
             <div className="text-center mb-8">
               <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-purple-500/50 animate-float">
                 <Shield className="w-10 h-10 text-white animate-pulse" />
@@ -178,18 +205,28 @@ setTimeout(() => {
                 }`}
               >
                 <div className="flex flex-col items-center gap-2">
-                  <div className={`p-3 rounded-xl transition-all duration-300 ${
-                    loginType === 'client' ? 'bg-blue-500 text-white shadow-lg' : 'bg-white/10 text-white/70'
-                  }`}>
+                  <div
+                    className={`p-3 rounded-xl transition-all duration-300 ${
+                      loginType === 'client'
+                        ? 'bg-blue-500 text-white shadow-lg'
+                        : 'bg-white/10 text-white/70'
+                    }`}
+                  >
                     <Building2 className="w-6 h-6" />
                   </div>
                   <div className="text-center">
-                    <div className={`font-semibold transition-colors ${
-                      loginType === 'client' ? 'text-blue-200' : 'text-white/70'
-                    }`}>
+                    <div
+                      className={`font-semibold transition-colors ${
+                        loginType === 'client'
+                          ? 'text-blue-200'
+                          : 'text-white/70'
+                      }`}
+                    >
                       Client Portal
                     </div>
-                    <div className="text-xs text-white/50">Business access</div>
+                    <div className="text-xs text-white/50">
+                      Business access
+                    </div>
                   </div>
                   {loginType === 'client' && (
                     <CheckCircle2 className="w-5 h-5 text-blue-400 animate-scale-in" />
@@ -207,15 +244,23 @@ setTimeout(() => {
                 }`}
               >
                 <div className="flex flex-col items-center gap-2">
-                  <div className={`p-3 rounded-xl transition-all duration-300 ${
-                    loginType === 'admin' ? 'bg-purple-500 text-white shadow-lg' : 'bg-white/10 text-white/70'
-                  }`}>
+                  <div
+                    className={`p-3 rounded-xl transition-all duration-300 ${
+                      loginType === 'admin'
+                        ? 'bg-purple-500 text-white shadow-lg'
+                        : 'bg-white/10 text-white/70'
+                    }`}
+                  >
                     <User className="w-6 h-6" />
                   </div>
                   <div className="text-center">
-                    <div className={`font-semibold transition-colors ${
-                      loginType === 'admin' ? 'text-purple-200' : 'text-white/70'
-                    }`}>
+                    <div
+                      className={`font-semibold transition-colors ${
+                        loginType === 'admin'
+                          ? 'text-purple-200'
+                          : 'text-white/70'
+                      }`}
+                    >
                       Admin Portal
                     </div>
                     <div className="text-xs text-white/50">Team access</div>
@@ -228,9 +273,17 @@ setTimeout(() => {
             </div>
 
             {/* Login Form */}
-            <form className="space-y-6" onSubmit={handleSubmit} aria-live="polite" aria-atomic="true">
+            <form
+              className="space-y-6"
+              onSubmit={handleSubmit}
+              aria-live="polite"
+              aria-atomic="true"
+            >
               {error && (
-                <div className="bg-red-500/20 border border-red-500/50 backdrop-blur-xl text-red-200 px-4 py-3 rounded-xl text-sm animate-shake" role="alert">
+                <div
+                  className="bg-red-500/20 border border-red-500/50 backdrop-blur-xl text-red-200 px-4 py-3 rounded-xl text-sm animate-shake"
+                  role="alert"
+                >
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4" />
                     {error}
@@ -241,10 +294,15 @@ setTimeout(() => {
               <div className="space-y-4">
                 {/* Email Input */}
                 <div className="group">
-                  <label htmlFor="email" className="block text-sm font-medium text-purple-200 mb-2">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-purple-200 mb-2"
+                  >
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4 text-purple-300 group-focus-within:text-blue-400 transition-colors" />
-                      {loginType === 'admin' ? 'Username or Email' : 'Email Address'}
+                      {loginType === 'admin'
+                        ? 'Username or Email'
+                        : 'Email Address'}
                     </div>
                   </label>
                   <div className="relative">
@@ -255,9 +313,13 @@ setTimeout(() => {
                       autoComplete="email"
                       required
                       className="appearance-none rounded-xl relative block w-full px-4 py-3 pl-11 border-2 border-white/20 bg-white/5 backdrop-blur-xl placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:bg-white/10"
-                      placeholder={loginType === 'admin' ? 'Enter username or email' : 'Enter company email'}
+                      placeholder={
+                        loginType === 'admin'
+                          ? 'Enter username or email'
+                          : 'Enter company email'
+                      }
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={e => setEmail(e.target.value)}
                       disabled={loading}
                     />
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40 pointer-events-none" />
@@ -266,7 +328,10 @@ setTimeout(() => {
 
                 {/* Password Input */}
                 <div className="group">
-                  <label htmlFor="password" className="block text-sm font-medium text-purple-200 mb-2">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-purple-200 mb-2"
+                  >
                     <div className="flex items-center gap-2">
                       <Lock className="w-4 h-4 text-purple-300 group-focus-within:text-blue-400 transition-colors" />
                       Password
@@ -282,7 +347,7 @@ setTimeout(() => {
                       className="appearance-none rounded-xl relative block w-full px-4 py-3 pl-11 pr-11 border-2 border-white/20 bg-white/5 backdrop-blur-xl placeholder-white/40 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:bg-white/10"
                       placeholder="Enter your password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={e => setPassword(e.target.value)}
                       disabled={loading}
                     />
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40 pointer-events-none" />
@@ -316,22 +381,25 @@ setTimeout(() => {
                     </span>
                   ) : (
                     <span className="flex items-center">
-                      Sign in to {loginType === 'client' ? 'Client Portal' : 'Admin Portal'}
+                      Sign in to{' '}
+                      {loginType === 'client' ? 'Client Portal' : 'Admin Portal'}
                       <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                     </span>
                   )}
                 </button>
               </div>
-				{/* Forgot Password Link */}
-			<div className="text-right">
-		<button
-				type="button"
-				onClick={() => router.push('/forgot-password')}
-				className="text-sm text-blue-600 hover:text-blue-500 font-medium"
-				>
-				Forgot your password?
-			</button>
-			</div>
+
+              {/* Forgot Password Link */}
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => router.push('/forgot-password')}
+                  className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+
               {/* Registration Links */}
               <div className="grid grid-cols-1 gap-3 pt-4 border-t border-white/10">
                 {/* Client Registration */}
@@ -358,10 +426,9 @@ setTimeout(() => {
               {/* Help Text */}
               <div className="text-center pt-2">
                 <p className="text-xs text-white/50">
-                  {loginType === 'admin' 
+                  {loginType === 'admin'
                     ? '🔐 Use your Apex team credentials'
-                    : '🏢 Use your company email and password'
-                  }
+                    : '🏢 Use your company email and password'}
                 </p>
               </div>
             </form>
@@ -372,8 +439,8 @@ setTimeout(() => {
         <div className="text-center">
           <div className="text-sm text-white/70 backdrop-blur-xl bg-white/5 rounded-xl py-3 px-4 border border-white/10">
             Need help?{' '}
-            <a 
-              href="mailto:support@apexdigitalafrica.com" 
+            <a
+              href="mailto:support@apexdigitalafrica.com"
               className="text-blue-300 hover:text-blue-200 font-medium inline-flex items-center gap-1 transition-colors"
             >
               Contact support
@@ -385,23 +452,57 @@ setTimeout(() => {
 
       <style jsx>{`
         @keyframes blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
+          0%,
+          100% {
+            transform: translate(0, 0) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
+          }
         }
         @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
         }
         @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-          20%, 40%, 60%, 80% { transform: translateX(5px); }
+          0%,
+          100% {
+            transform: translateX(0);
+          }
+          10%,
+          30%,
+          50%,
+          70%,
+          90% {
+            transform: translateX(-5px);
+          }
+          20%,
+          40%,
+          60%,
+          80% {
+            transform: translateX(5px);
+          }
         }
         @keyframes scale-in {
-          0% { transform: scale(0); opacity: 0; }
-          50% { transform: scale(1.2); }
-          100% { transform: scale(1); opacity: 1; }
+          0% {
+            transform: scale(0);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.2);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
         }
         .animate-blob {
           animation: blob 7s infinite;
@@ -423,5 +524,19 @@ setTimeout(() => {
         }
       `}</style>
     </div>
+  )
+}
+
+export default function Login() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-200 text-sm">
+          Preparing secure login...
+        </div>
+      }
+    >
+      <LoginInner />
+    </Suspense>
   )
 }
