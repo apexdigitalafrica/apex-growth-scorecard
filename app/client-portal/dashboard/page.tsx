@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useClientAuth } from '@/hooks/use-client-auth';
+import { useAuthStore } from '@/lib/session-client'; // ← Use unified auth store
 import { ClientLoadingScreen } from '@/components/client-loading-screen';
 import { 
   TrendingUp, 
@@ -30,31 +30,19 @@ interface ClientStats {
   }>;
 }
 
-// Remove the duplicate function declaration and fix the existing one
 export default function ClientDashboard() {
   const router = useRouter();
-  const { clientUser, isAuthenticated, isLoading } = useClientAuth(true);
+  const { user, isAuthenticated, isLoading } = useAuthStore(); // ← Use unified store
   const [stats, setStats] = useState<ClientStats | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
   // Show loading while checking auth
-  if (isLoading || !isAuthenticated) {
+  if (isLoading || !isAuthenticated || user?.role !== 'client') {
     return <ClientLoadingScreen companyName="Your Company" />;
   }
 
-  // Mock client data - will be replaced by real auth
-  const mockClientUser = clientUser || {
-    id: 'client-1',
-    full_name: 'John CEO',
-    role: 'owner' as const,
-    client: {
-      id: 'company-1',
-      company_name: 'Moratech Limited',
-      primary_color: '#0066CC',
-      logo_url: null,
-      contact_email: 'ceo@moratech.ng'
-    }
-  };
+  // Use the real client user from auth
+  const clientUser = user;
 
   useEffect(() => {
     // Simulate loading client-specific data
@@ -91,9 +79,6 @@ export default function ClientDashboard() {
     loadClientData();
   }, []);
 
-  // Use the real clientUser from auth if available, otherwise mock
-  const currentClientUser = clientUser || mockClientUser;
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Client Branded Header */}
@@ -103,13 +88,13 @@ export default function ClientDashboard() {
             <div className="flex items-center gap-4">
               <div 
                 className="h-8 w-8 rounded-lg flex items-center justify-center text-white font-bold text-sm"
-                style={{ backgroundColor: currentClientUser.client.primary_color }}
+                style={{ backgroundColor: clientUser.client.primary_color || '#0066CC' }}
               >
-                {currentClientUser.client.company_name.substring(0, 2).toUpperCase()}
+                {clientUser.client.company_name.substring(0, 2).toUpperCase()}
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">
-                  {currentClientUser.client.company_name} Portal
+                  {clientUser.client.company_name} Portal
                 </h1>
                 <p className="text-sm text-gray-500">Growth Analytics Dashboard</p>
               </div>
@@ -122,7 +107,7 @@ export default function ClientDashboard() {
               </div>
               <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-gray-600">
-                  {currentClientUser.full_name.split(' ').map(n => n[0]).join('')}
+                  {clientUser.full_name.split(' ').map(n => n[0]).join('')}
                 </span>
               </div>
             </div>
@@ -272,20 +257,6 @@ export default function ClientDashboard() {
 }
 
 // Supporting Components
-function ClientLoadingScreen({ companyName }: { companyName: string }) {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-16 h-16 border-t-4 border-b-4 border-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Loading {companyName} Portal
-        </h3>
-        <p className="text-gray-600">Preparing your analytics...</p>
-      </div>
-    </div>
-  );
-}
-
 function ActionCard({ 
   title, 
   description, 
