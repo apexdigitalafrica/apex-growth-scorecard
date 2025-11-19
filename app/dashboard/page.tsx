@@ -1,5 +1,6 @@
 'use client';
 export const dynamic = 'force-dynamic';
+
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { 
@@ -28,20 +29,13 @@ import {
   X,
   Lock, 
   Shield,
-  Award // ← ADD THIS LINE!
+  Award
 } from 'lucide-react';
 
 import AIGrowthChatbot from '@/components/AIGrowthChatbot';
 import { useAuthStore } from '@/lib/session-client';
 import { useRouter } from 'next/navigation';
 
-const { logout } = useAuthStore();
-const router = useRouter();
-
-const handleLogout = () => {
-  logout();
-  router.push('/client-portal/login');
-};
 // Types & Interfaces
 interface DashboardStats {
   totalSubmissions: number;
@@ -85,6 +79,16 @@ type TimeRange = '7d' | '30d' | '90d' | 'all';
 type LeadFilter = 'all' | 'hot' | 'warm' | 'cold';
 
 export default function Dashboard() {
+  // ✅ Hooks inside component
+  const { logout } = useAuthStore();
+  const router = useRouter();
+
+  // ✅ Functions inside component
+  const handleLogout = () => {
+    logout();
+    router.push('/client-portal/login');
+  };
+
   // State Management
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -229,7 +233,7 @@ export default function Dashboard() {
         <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse delay-500"></div>
       </div>
 	  
-	  {/* 🔒 ELITE SECURITY BANNER - ADD THIS AT THE TOP */}
+	  {/* 🔒 ELITE SECURITY BANNER */}
       <div className="relative z-50 bg-gradient-to-r from-green-900/90 via-emerald-900/90 to-green-900/90 backdrop-blur-xl border-b-2 border-green-500/50 shadow-2xl">
         <div className="max-w-[1600px] mx-auto px-6 py-3">
           <div className="flex items-center justify-center gap-4 animate-fadeIn">
@@ -255,7 +259,7 @@ export default function Dashboard() {
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                   <BarChart3 className="w-6 h-6 text-white" />
                 </div>
-		         <div>
+		        <div>
                   <div className="text-white font-bold text-lg">Apex Dashboard</div>
                   <div className="text-blue-300 text-xs">Growth Analytics</div>
                 </div>
@@ -263,6 +267,15 @@ export default function Dashboard() {
             </div>
             
             <div className="flex items-center gap-4">
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="text-red-300 hover:text-red-200 transition-colors flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-500/20"
+              >
+                <Lock className="w-4 h-4" />
+                Logout
+              </button>
+              
               <Link
                 href="/scorecard"
                 className="text-blue-200 hover:text-white transition-colors flex items-center gap-2 text-sm font-medium"
@@ -278,39 +291,41 @@ export default function Dashboard() {
         </div>
       </nav>
 
- <div className="relative z-10 max-w-[1600px] mx-auto p-6 lg:p-8">
-  {/* Quick Access Cards */}
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    {/* Growth Scorecard Overview */}
-    <Link
-      href="/scorecard"
-      className="group bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border-2 border-emerald-500/30 rounded-2xl p-6 hover:border-emerald-500 transition-all hover:scale-105"
-    >
-      <Award className="w-10 h-10 text-emerald-400 mb-3" />
-      <h3 className="text-xl font-bold text-white mb-2">Growth Scorecard</h3>
-      <p className="text-slate-400 mb-4">
-        Individual digital maturity assessments
-      </p>
-      <div className="flex items-center text-emerald-400 font-semibold">
-        View Submissions <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-      </div>
-    </Link>
+      {/* Rest of your component remains the same... */}
+      <div className="relative z-10 max-w-[1600px] mx-auto p-6 lg:p-8">
+        {/* Your existing dashboard content */}
+        {/* Quick Access Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Growth Scorecard Overview */}
+          <Link
+            href="/scorecard"
+            className="group bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border-2 border-emerald-500/30 rounded-2xl p-6 hover:border-emerald-500 transition-all hover:scale-105"
+          >
+            <Award className="w-10 h-10 text-emerald-400 mb-3" />
+            <h3 className="text-xl font-bold text-white mb-2">Growth Scorecard</h3>
+            <p className="text-slate-400 mb-4">
+              Individual digital maturity assessments
+            </p>
+            <div className="flex items-center text-emerald-400 font-semibold">
+              View Submissions <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
 
-    {/* Funnel Analysis Tool */}
-   <Link
-  href="/funnel-analysis"
-  className="group bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500 transition-all hover:scale-105"
->
-  <BarChart3 className="w-10 h-10 text-blue-400 mb-3" />
-  <h3 className="text-xl font-bold text-white mb-2">Funnel Analysis</h3>
-  <p className="text-slate-400 mb-4">
-    Real-time funnel diagnostics & revenue recovery
-  </p>
-  <div className="flex items-center text-blue-400 font-semibold">
-    Analyze Funnels <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-  </div>
-</Link>
-  </div>
+          {/* Funnel Analysis Tool */}
+          <Link
+            href="/funnel-analysis"
+            className="group bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500 transition-all hover:scale-105"
+          >
+            <BarChart3 className="w-10 h-10 text-blue-400 mb-3" />
+            <h3 className="text-xl font-bold text-white mb-2">Funnel Analysis</h3>
+            <p className="text-slate-400 mb-4">
+              Real-time funnel diagnostics & revenue recovery
+            </p>
+            <div className="flex items-center text-blue-400 font-semibold">
+              Analyze Funnels <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+        </div>
         
         {/* Header Section with Glassmorphism */}
         <div className="mb-8">

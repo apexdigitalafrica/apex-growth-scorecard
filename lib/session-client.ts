@@ -2,11 +2,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface ClientUser {
+interface BaseUser {
   id: string;
-  full_name: string;
   email: string;
-  role: string;
+  full_name: string;
+  role: 'admin' | 'client';
+}
+
+interface AdminUser extends BaseUser {
+  role: 'admin';
+  permissions: string[];
+}
+
+interface ClientUser extends BaseUser {
+  role: 'client';
   client: {
     company_name: string;
     primary_color?: string;
@@ -14,11 +23,13 @@ interface ClientUser {
   };
 }
 
+type User = AdminUser | ClientUser;
+
 interface AuthState {
-  clientUser: ClientUser | null;
+  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (user: ClientUser) => void;
+  login: (user: User) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
 }
@@ -26,15 +37,21 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      clientUser: null,
+      user: null,
       isAuthenticated: false,
       isLoading: true,
-      login: (user) => set({ clientUser: user, isAuthenticated: true, isLoading: false }),
-      logout: () => set({ clientUser: null, isAuthenticated: false, isLoading: false }),
+      login: (user) => {
+        console.log('🔄 AuthStore: User logged in', user.role)
+        set({ user, isAuthenticated: true, isLoading: false })
+      },
+      logout: () => {
+        console.log('🔄 AuthStore: User logged out')
+        set({ user: null, isAuthenticated: false, isLoading: false })
+      },
       setLoading: (loading) => set({ isLoading: loading }),
     }),
     {
-      name: 'apex-client-auth',
+      name: 'apex-unified-auth',
     }
   )
 );

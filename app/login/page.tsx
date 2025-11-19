@@ -1,17 +1,17 @@
-// app/client-portal/login/page.tsx
+// app/login/page.tsx
 'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/session-client'
 
-export default function ClientLogin() {
+export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const { login } = useAuthStore() // ← Changed from setUser to login
+  const { login } = useAuthStore()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -19,7 +19,7 @@ export default function ClientLogin() {
     setError('')
 
     try {
-      const response = await fetch('/api/client-auth', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,11 +33,15 @@ export default function ClientLogin() {
         throw new Error(data.error || 'Authentication failed')
       }
 
-      // Update auth store - use login instead of setUser
-      login(data.user) // ← This is the key change
+      // Login to unified store
+      login(data.user)
       
-      // Use replace instead of push to prevent back navigation to login
-      router.replace('/client-portal/dashboard')
+      // Redirect based on role
+      if (data.user.role === 'admin') {
+        router.replace('/dashboard')
+      } else if (data.user.role === 'client') {
+        router.replace('/client-portal/dashboard')
+      }
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -51,10 +55,10 @@ export default function ClientLogin() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Client Portal Login
+            Apex Growth Portal
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your credentials to access the client portal
+            Sign in to your account
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
