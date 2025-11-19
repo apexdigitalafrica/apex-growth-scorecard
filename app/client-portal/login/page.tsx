@@ -1,10 +1,9 @@
-// app/client-portal/login/page.tsx
+// app/client-portal/login/page.tsx - UPDATED VERSION
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/session-client';
-import { authenticateClient } from '@/lib/client-auth';
 import Link from 'next/link';
 
 export default function ClientLogin() {
@@ -21,17 +20,25 @@ export default function ClientLogin() {
     setError('');
 
     try {
-      const clientUser = await authenticateClient(email, password);
-      
-      if (clientUser) {
-        login(clientUser);
+      const response = await fetch('/api/client-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.user) {
+        login(data.user);
         router.push('/client-portal/dashboard');
       } else {
-        setError('Invalid email or password. Please try again.');
+        setError(data.error || 'Invalid email or password. Please try again.');
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('An error occurred during login. Please try again.');
+      setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
