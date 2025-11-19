@@ -1,124 +1,59 @@
-// app/api/auth/login/route.ts - Refined Secure Version
+// app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Missing Supabase env vars in /api/auth/login')
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, loginType = 'client' } = await request.json()
+    const { email, password } = await request.json()
 
-    console.log('🔐 Login attempt for:', email, 'Type:', loginType)
+    console.log('🔐 Login attempt for:', email)
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email/username and password are required' },
+        { error: 'Email and password are required' },
         { status: 400 }
       )
     }
 
-    let authEmail = email
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-    // Handle admin username login by looking up email
-    if (loginType === 'admin' && !email.includes('@')) {
-      console.log('🔄 Admin username detected, looking up email...')
-
-      const { data: adminUser, error: adminLookupError } = await supabaseAdmin
-        .from('admin_users')
-        .select('email, username')
-        .eq('username', email)
-        .single()
-
-      if (adminLookupError || !adminUser) {
-        console.error('❌ Admin username not found:', email)
-        return NextResponse.json(
-          { error: 'Invalid username or password' },
-          { status: 401 }
-        )
-      }
-
-      authEmail = adminUser.email
-      console.log('✅ Found email for username:', authEmail)
-    }
-
-    // Authenticate with Supabase Auth
-    console.log('🔐 Attempting Supabase auth with:', authEmail)
-    const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
-      email: authEmail,
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
       password,
     })
 
-    if (authError) {
-      console.error('❌ Authentication error:', authError.message)
+    if (error) {
+      console.error('❌ Supabase login error:', error.message)
+      // 401 is appropriate here: wrong email/password
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       )
     }
 
-    if (!authData.user) {
-      return NextResponse.json(
-        { error: 'Authentication failed' },
-        { status: 401 }
-      )
-    }
+    console.log('✅ Login success for:', email)
 
-    // Check if user is admin by permissions
-    const { data: adminUser, error: adminError } = await supabaseAdmin
-      .from('admin_users')
-      .select('full_name, permissions, username')
-      .eq('id', authData.user.id)
-      .single()
-
-    if (!adminError && adminUser && adminUser.permissions?.includes('admin')) {
-      console.log('👑 Admin user detected:', adminUser.email)
-      const userData = {
-        id: authData.user.id,
-        email: authData.user.email!,
-        full_name: adminUser.full_name,
-        role: 'admin' as const,
-        permissions: adminUser.permissions,
-        username: adminUser.username
-      }
-      return NextResponse.json({ user: userData })
-    }
-
-    // Check if user is client
-    const { data: clientUser, error: clientError } = await supabaseAdmin
-      .from('client_users')
-      .select(`
-        full_name,
-        clients (company_name, primary_color, logo_url)
-      `)
-      .eq('id', authData.user.id)
-      .single()
-
-    if (!clientError && clientUser) {
-      console.log('👤 Client user detected:', clientUser.email)
-      const userData = {
-        id: authData.user.id,
-        email: authData.user.email!,
-        full_name: clientUser.full_name,
-        role: 'client' as const,
-        client: {
-          company_name: clientUser.clients?.company_name || 'Unknown Company',
-          primary_color: clientUser.clients?.primary_color,
-          logo_url: clientUser.clients?.logo_url
-        }
-      }
-      return NextResponse.json({ user: userData })
-    }
-
-    console.error('❌ User not found in admin_users or client_users tables')
-    
-    // No auto-creation - must be pre-registered
+    // You can store session/access_token in a cookie here if you want.
+    // For now just return the user + session to the client.
     return NextResponse.json(
-      { error: 'Account not found. Please contact support to create an account.' },
-      { status: 403 }
+      {
+        success: true,
+        user: data.user,
+        session: data.session,
+      },
+      { status: 200 }
     )
-
-  } catch (error) {
-    console.error('🚨 Auth API error:', error)
+  } catch (err) {
+    console.error('🚨 /api/auth/login unexpected error:', err)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Something went wrong during login' },
       { status: 500 }
     )
   }
