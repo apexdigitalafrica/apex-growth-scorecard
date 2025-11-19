@@ -1,4 +1,4 @@
-// app/client-portal/login/page.tsx - UPDATED VERSION
+// app/client-portal/login/page.tsx  ← FINAL, BULLETPROOF VERSION
 'use client';
 
 import { useState } from 'react';
@@ -11,8 +11,9 @@ export default function ClientLogin() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
   const router = useRouter();
-  const { login } = useAuthStore();
+  const login = useAuthStore((state) => state.login); // ← THIS LINE FIXED IT
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,10 +23,8 @@ export default function ClientLogin() {
     try {
       const response = await fetch('/api/client-auth', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
       const data = await response.json();
@@ -34,125 +33,84 @@ export default function ClientLogin() {
         login(data.user);
         router.push('/client-portal/dashboard');
       } else {
-        setError(data.error || 'Invalid email or password. Please try again.');
+        setError(data.error || 'Invalid email or password');
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError('Network error. Please try again.');
+      console.error('Login failed:', err);
+      setError('Connection failed. Please check your internet.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white rounded-2xl shadow-xl p-8">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold text-lg">AP</span>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+        <div className="text-center mb-8">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center shadow-lg">
+            <span className="text-white text-2xl font-bold">AP</span>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Client Portal
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to access your growth analytics
-          </p>
+          <h2 className="mt-6 text-3xl font-bold text-gray-900">Client Portal</h2>
+          <p className="mt-2 text-gray-600">Sign in to view your growth analytics</p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+        <form onSubmit={handleLogin} className="space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-medium">
               {error}
             </div>
           )}
-          
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Work Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                placeholder="your@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                placeholder="Your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Work Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              placeholder="you@company.com"
+            />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                Remember me
-              </label>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              placeholder="••••••••"
+            />
+          </div>
 
-            <div className="text-sm">
-              <Link 
-                href="/client-portal/forgot-password" 
-                className="text-blue-600 hover:text-blue-500 font-medium"
-              >
-                Forgot password?
-              </Link>
-            </div>
+          <div className="flex items-center justify-between text-sm">
+            <label className="flex items-center">
+              <input type="checkbox" className="mr-2 rounded text-blue-600" />
+              <span className="text-gray-600">Remember me</span>
+            </label>
+            <Link href="/client-portal/forgot-password" className="text-blue-600 hover:text-blue-700 font-medium">
+              Forgot password?
+            </Link>
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Signing in...
-              </div>
-            ) : (
-              'Sign in to Portal'
-            )}
+            {isLoading ? 'Signing in...' : 'Sign in to Portal'}
           </button>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Need access?{' '}
-              <Link 
-                href="/contact" 
-                className="text-blue-600 hover:text-blue-500 font-medium"
-              >
-                Contact your account manager
-              </Link>
-            </p>
-          </div>
+          <p className="text-center text-sm text-gray-600 mt-6">
+            Need access?{' '}
+            <Link href="/contact" className="text-blue-600 hover:text-blue-700 font-medium">
+              Contact your account manager
+            </Link>
+          </p>
         </form>
       </div>
     </div>
