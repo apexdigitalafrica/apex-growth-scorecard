@@ -404,13 +404,13 @@ export default function ClientDashboard() {
                 onClick={() => router.push('/client-portal/funnel-analysis')}
                 status="new"
               />
-              <EliteActionCard
-                title="Executive Reports"
-                descriptionDownload comprehensive PDF reports and insights"
-                icon="📄"
-                gradient="from-green-500 to-emerald-500"
-                onClick={() => router.push('/client-portal/reports')}
-              />
+			<EliteActionCard
+  title="Executive Reports"
+  description="Download comprehensive PDF reports and insights" 
+  icon="📄"
+  gradient="from-green-500 to-emerald-500"
+  onClick={() => router.push('/client-portal/reports')}
+/>
               <EliteActionCard
                 title="Growth Strategy"
                 description="Personalized recommendations and implementation roadmap"
