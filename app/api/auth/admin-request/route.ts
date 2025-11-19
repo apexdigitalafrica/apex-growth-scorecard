@@ -34,12 +34,12 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Admin request saved to database with ID:', data.id)
 
-    // 2. Send email notification via Brevo
+    // 2. Send email notification to admin via Brevo
     try {
       await sendBrevoEmail({
         sender: {
           name: 'Apex Growth Portal',
-          email: 'notifications@apexdigitalafrica.com' // Use your verified Brevo sender
+          email: 'notifications@apexdigitalafrica.com'
         },
         to: [
           {
@@ -54,13 +54,62 @@ export async function POST(request: NextRequest) {
         ...emailTemplates.adminRequestNotification({
           contact_email,
           full_name,
+          phone,
           message
         })
       })
 
-      console.log('✅ Brevo email sent successfully')
+      console.log('✅ Admin notification email sent successfully')
     } catch (emailError) {
-      console.error('❌ Failed to send Brevo email:', emailError)
+      console.error('❌ Failed to send admin notification email:', emailError)
+      // Don't fail the request if email fails
+    }
+
+    // 3. Send confirmation email to requester
+    try {
+      await sendBrevoEmail({
+        sender: {
+          name: 'Apex Growth Portal',
+          email: 'notifications@apexdigitalafrica.com'
+        },
+        to: [
+          {
+            email: contact_email,
+            name: full_name
+          }
+        ],
+        replyTo: {
+          email: 'support@apexdigitalafrica.com',
+          name: 'Apex Support'
+        },
+        subject: 'Admin Access Request Received - Apex Growth Portal',
+        htmlContent: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center; color: white;">
+              <h1>🔐 Admin Access Request Received</h1>
+            </div>
+            <div style="padding: 30px; background: #f9f9f9;">
+              <h2>Hello ${full_name},</h2>
+              <p>Thank you for your admin access request for the Apex Growth Portal.</p>
+              <p><strong>What happens next?</strong></p>
+              <ul>
+                <li>Our team will review your request</li>
+                <li>We'll verify your credentials</li>
+                <li>You'll receive login details within 24 hours</li>
+              </ul>
+              <p>If you have any questions, contact <a href="mailto:support@apexdigitalafrica.com">support@apexdigitalafrica.com</a></p>
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px;">
+                <p>Request ID: ${data.id}</p>
+                <p>© 2025 Apex Digital Africa. All rights reserved.</p>
+              </div>
+            </div>
+          </div>
+        `
+      })
+      
+      console.log('✅ Confirmation email sent to requester')
+    } catch (emailError) {
+      console.error('❌ Failed to send confirmation email:', emailError)
       // Don't fail the request if email fails
     }
 

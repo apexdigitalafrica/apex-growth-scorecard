@@ -1,7 +1,7 @@
 // app/client-portal/dashboard/page.tsx
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/session-client';
 import { 
@@ -29,7 +29,13 @@ import {
   Mail,
   MessageSquare,
   Crown,
-  Star
+  Star,
+  TrendingDown,
+  Activity,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
+  Flame
 } from 'lucide-react';
 
 interface ClientStats {
@@ -63,6 +69,11 @@ export default function ClientDashboard() {
   const [dataLoading, setDataLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [notifications, setNotifications] = useState(3);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Show loading while checking auth
   if (isLoading || !isAuthenticated || user?.role !== 'client') {
@@ -146,93 +157,110 @@ export default function ClientDashboard() {
   };
 
   const getPerformanceBadge = (score: number) => {
-    if (score >= 90) return { label: 'ELITE', color: 'from-purple-500 to-pink-500', icon: Crown };
-    if (score >= 80) return { label: 'LEADING', color: 'from-blue-500 to-cyan-500', icon: Award };
-    if (score >= 70) return { label: 'GROWING', color: 'from-green-500 to-emerald-500', icon: TrendingUp };
-    return { label: 'DEVELOPING', color: 'from-orange-500 to-red-500', icon: Zap };
+    if (score >= 90) return { label: 'ELITE', color: 'from-purple-500 via-pink-500 to-purple-600', icon: Crown, glow: 'shadow-purple-500/50' };
+    if (score >= 80) return { label: 'LEADING', color: 'from-blue-500 via-cyan-500 to-blue-600', icon: Award, glow: 'shadow-blue-500/50' };
+    if (score >= 70) return { label: 'GROWING', color: 'from-green-500 via-emerald-500 to-green-600', icon: TrendingUp, glow: 'shadow-green-500/50' };
+    return { label: 'DEVELOPING', color: 'from-orange-500 via-red-500 to-orange-600', icon: Zap, glow: 'shadow-orange-500/50' };
   };
 
   const performanceBadge = getPerformanceBadge(stats?.averageScore || 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-      {/* Animated Background Elements */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 relative overflow-hidden">
+      {/* Animated Mesh Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-r from-blue-200/20 to-cyan-200/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-r from-purple-200/20 to-pink-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black,transparent)]"></div>
+        
+        {/* Animated Orbs */}
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl animate-float animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
       </div>
 
-      {/* Elite Navigation Header */}
-      <header className="relative z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 sticky top-0">
+      {/* Ultra-Premium Navigation */}
+      <header className={`relative z-50 backdrop-blur-2xl bg-slate-900/60 border-b border-white/10 sticky top-0 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            {/* Brand Section */}
+            {/* Elite Brand Section */}
             <div className="flex items-center gap-4">
-              <div 
-                className="relative group h-12 w-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform duration-300"
-                style={{ 
-                  background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` 
-                }}
-              >
-                {clientUser.client.company_name.substring(0, 2).toUpperCase()}
-                <div className="absolute inset-0 rounded-2xl bg-white/20 group-hover:bg-white/30 transition-colors"></div>
+              <div className="relative group">
+                <div 
+                  className="relative h-14 w-14 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-3"
+                  style={{ 
+                    background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` 
+                  }}
+                >
+                  {clientUser.client.company_name.substring(0, 2).toUpperCase()}
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  <div className={`absolute -inset-1 bg-gradient-to-r ${performanceBadge.color} rounded-2xl blur opacity-30 group-hover:opacity-60 transition-opacity`}></div>
+                </div>
               </div>
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-black bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent">
                   {clientUser.client.company_name}
                 </h1>
-                <p className="text-sm text-gray-600 flex items-center gap-1">
-                  <Shield className="w-3 h-3 text-green-500" />
-                  Secure Growth Portal • {performanceBadge.label} Tier
-                </p>
+                <div className="flex items-center gap-2">
+                  <Shield className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                  <span className="text-xs font-semibold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                    Enterprise Portal • {performanceBadge.label} Tier
+                  </span>
+                </div>
               </div>
             </div>
             
-            {/* Navigation Controls */}
-            <div className="flex items-center gap-6">
-              {/* Search */}
-              <div className="relative hidden lg:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            {/* Premium Controls */}
+            <div className="flex items-center gap-4">
+              {/* Elite Search */}
+              <div className="relative hidden lg:block group">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40 group-focus-within:text-cyan-400 transition-colors" />
                 <input
                   type="text"
-                  placeholder="Search analytics..."
-                  className="pl-10 pr-4 py-2.5 bg-white/80 border border-gray-200/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm backdrop-blur-sm min-w-[280px]"
+                  placeholder="Search your empire..."
+                  className="pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-sm backdrop-blur-xl min-w-[320px] text-white placeholder-white/40 transition-all duration-300 hover:bg-white/10"
                 />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-500/0 via-blue-500/0 to-purple-500/0 group-focus-within:from-cyan-500/10 group-focus-within:via-blue-500/10 group-focus-within:to-purple-500/10 pointer-events-none transition-all duration-500"></div>
               </div>
 
-              {/* Notifications */}
-              <button className="relative p-2.5 rounded-xl bg-white/60 border border-gray-200/40 hover:bg-white/80 transition-all group">
-                <Bell className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+              {/* Premium Notifications */}
+              <button className="relative p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300 group">
+                <Bell className="w-5 h-5 text-white/70 group-hover:text-white group-hover:animate-wiggle" />
                 {notifications > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse shadow-lg shadow-red-500/50">
                     {notifications}
                   </span>
                 )}
               </button>
 
-              {/* User Menu */}
+              {/* Ultra User Menu */}
               <div className="flex items-center gap-3">
                 <div className="text-right hidden sm:block">
-                  <div className="font-semibold text-gray-900">{clientUser.full_name}</div>
-                  <div className="text-xs text-gray-500">{clientUser.role}</div>
+                  <div className="font-bold text-white text-sm">{clientUser.full_name}</div>
+                  <div className="text-xs bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent font-semibold">{clientUser.role}</div>
                 </div>
                 <div className="relative group">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white font-semibold text-sm cursor-pointer group-hover:scale-110 transition-transform shadow-lg">
-                    {clientUser.full_name.split(' ').map(n => n[0]).join('')}
+                  <div 
+                    className="w-12 h-12 bg-gradient-to-br from-blue-500 via-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-sm cursor-pointer transition-all duration-500 hover:scale-110 hover:rotate-3 shadow-lg shadow-blue-500/50 relative overflow-hidden"
+                  >
+                    <span className="relative z-10">{clientUser.full_name.split(' ').map(n => n[0]).join('')}</span>
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
                   
-                  {/* Dropdown Menu */}
-                  <div className="absolute right-0 top-12 w-48 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/60 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                    <button className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50/80 transition-colors rounded-t-2xl flex items-center gap-3">
-                      <Settings className="w-4 h-4" />
-                      Settings
+                  {/* Premium Dropdown */}
+                  <div className="absolute right-0 top-16 w-56 backdrop-blur-2xl bg-slate-900/90 rounded-2xl shadow-2xl border border-white/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:top-14 transition-all duration-300 z-50 overflow-hidden">
+                    <div className="p-4 border-b border-white/10">
+                      <div className="font-bold text-white mb-1">{clientUser.full_name}</div>
+                      <div className="text-xs text-white/60">{clientUser.email}</div>
+                    </div>
+                    <button className="w-full px-4 py-3 text-left text-white/80 hover:bg-white/10 transition-colors flex items-center gap-3 group/item">
+                      <Settings className="w-4 h-4 group-hover/item:rotate-90 transition-transform duration-500" />
+                      <span>Settings</span>
                     </button>
                     <button 
                       onClick={handleLogout}
-                      className="w-full px-4 py-3 text-left text-red-600 hover:bg-red-50/80 transition-colors rounded-b-2xl flex items-center gap-3"
+                      className="w-full px-4 py-3 text-left text-red-400 hover:bg-red-500/10 transition-colors rounded-b-2xl flex items-center gap-3"
                     >
                       <LogOut className="w-4 h-4" />
-                      Sign Out
+                      <span>Sign Out</span>
                     </button>
                   </div>
                 </div>
@@ -243,242 +271,362 @@ export default function ClientDashboard() {
       </header>
 
       {/* Main Dashboard Content */}
-      <main className="relative z-10 max-w-7xl mx-auto py-8 px-6 lg:px-8">
-        {/* Welcome & Performance Banner */}
+      <main className={`relative z-10 max-w-7xl mx-auto py-8 px-6 lg:px-8 transition-all duration-1000 delay-200 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        {/* Epic Hero Section */}
         <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-6">
-            <div>
-              <h2 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
-                Welcome back, {clientUser.full_name.split(' ')[0]}! <span className="animate-wave inline-block">👋</span>
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`px-4 py-2 rounded-xl bg-gradient-to-r ${performanceBadge.color} text-white font-bold text-sm shadow-lg ${performanceBadge.glow} flex items-center gap-2 animate-glow`}>
+                  <performanceBadge.icon className="w-4 h-4" />
+                  {performanceBadge.label} TIER
+                </div>
+                <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 backdrop-blur-xl border border-emerald-500/30 text-emerald-300 font-bold text-sm flex items-center gap-2">
+                  <Flame className="w-4 h-4 animate-pulse" />
+                  🔥 On Fire This Month
+                </div>
+              </div>
+              <h2 className="text-4xl lg:text-6xl font-black bg-gradient-to-r from-white via-blue-100 to-cyan-100 bg-clip-text text-transparent mb-4 leading-tight">
+                Welcome back, {clientUser.full_name.split(' ')[0]}! 
+                <span className="inline-block animate-wave ml-2">👋</span>
               </h2>
-              <p className="text-xl text-gray-600 max-w-2xl">
-                Your enterprise is performing in the <span className="font-semibold text-gray-900">{performanceBadge.label}</span> tier. 
-                Here's what's driving your growth this week.
+              <p className="text-xl text-white/70 max-w-3xl leading-relaxed">
+                Your enterprise is crushing it in the <span className="font-bold text-white">{performanceBadge.label}</span> tier. 
+                Here's the intelligence powering your competitive edge.
               </p>
             </div>
             
-            {/* Performance Badge */}
-            <div className={`bg-gradient-to-r ${performanceBadge.color} text-white px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3 min-w-[200px] group hover:scale-105 transition-transform duration-300`}>
-              <div className="p-2 bg-white/20 rounded-xl">
-                <performanceBadge.icon className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="text-sm opacity-90">Performance Tier</div>
-                <div className="text-xl font-bold">{performanceBadge.label}</div>
+            {/* 3D Performance Badge */}
+            <div className="relative group">
+              <div className={`absolute inset-0 bg-gradient-to-r ${performanceBadge.color} rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse`}></div>
+              <div className={`relative bg-gradient-to-r ${performanceBadge.color} text-white px-8 py-6 rounded-3xl shadow-2xl flex items-center gap-4 min-w-[240px] transform group-hover:scale-110 group-hover:rotate-2 transition-all duration-500 overflow-hidden`}>
+                <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer"></div>
+                <div className="relative p-3 bg-white/20 rounded-2xl backdrop-blur-xl">
+                  <performanceBadge.icon className="w-8 h-8 animate-float" />
+                </div>
+                <div className="relative">
+                  <div className="text-sm opacity-90 font-semibold mb-1">Performance Tier</div>
+                  <div className="text-2xl font-black tracking-tight">{performanceBadge.label}</div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Quick Stats Bar */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <QuickStat 
+          {/* Ultra Quick Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <UltraQuickStat 
               label="Industry Rank" 
               value={`#${stats?.industryRank || 0}`} 
               trend="up" 
-              change="+5"
-              icon={<Award className="w-4 h-4" />}
+              change="+5 positions"
+              icon={Award}
+              gradient="from-yellow-500 to-orange-500"
             />
-            <QuickStat 
+            <UltraQuickStat 
               label="Completion Rate" 
               value={`${stats?.completionRate || 0}%`} 
               trend="up" 
-              change="+8%"
-              icon={<TrendingUp className="w-4 h-4" />}
+              change="+8% this week"
+              icon={CheckCircle2}
+              gradient="from-emerald-500 to-green-500"
             />
-            <QuickStat 
+            <UltraQuickStat 
               label="Active Users" 
               value={stats?.teamMembers || 0} 
-              trend="stable" 
-              change="+2"
-              icon={<Users className="w-4 h-4" />}
+              trend="up" 
+              change="+2 members"
+              icon={Users}
+              gradient="from-blue-500 to-cyan-500"
             />
-            <QuickStat 
+            <UltraQuickStat 
               label="Response Time" 
               value="< 2h" 
               trend="down" 
-              change="-30m"
-              icon={<Clock className="w-4 h-4" />}
+              change="-30 minutes"
+              icon={Clock}
+              gradient="from-purple-500 to-pink-500"
             />
           </div>
         </div>
 
-        {/* Elite Metrics Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
-          {/* Growth Score Card */}
+        {/* Premium Metrics Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+          {/* Ultra Growth Score */}
           <div className="xl:col-span-2">
-            <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border border-gray-200/60 shadow-xl hover:shadow-2xl transition-all duration-500 group">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                  Growth Intelligence
-                </h3>
-                <div className="flex items-center gap-2 text-sm text-green-600 font-semibold bg-green-50 px-3 py-1.5 rounded-full">
-                  <TrendingUp className="w-4 h-4" />
-                  +{stats?.scoreTrend}% this month
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <MetricCard
-                  value={stats?.averageScore || 0}
-                  max={100}
-                  label="Digital Maturity Score"
-                  trend={stats?.scoreTrend || 0}
-                  color="blue"
-                  precision={1}
-                />
-                <MetricCard
-                  value={stats?.totalSubmissions || 0}
-                  label="Team Assessments"
-                  trend={stats?.submissionsTrend || 0}
-                  color="green"
-                  suffix="completed"
-                />
-              </div>
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-cyan-500/20 to-purple-500/20 rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+              <div className="relative backdrop-blur-2xl bg-slate-900/60 border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-500 overflow-hidden">
+                {/* Animated Grid */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px] opacity-50"></div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-3xl font-black bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent flex items-center gap-3">
+                      <BarChart3 className="w-8 h-8 text-blue-400" />
+                      Growth Intelligence
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm text-emerald-400 font-bold bg-emerald-500/10 px-4 py-2 rounded-xl border border-emerald-500/30 backdrop-blur-xl">
+                      <TrendingUp className="w-4 h-4 animate-bounce" />
+                      +{stats?.scoreTrend}% this month
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <UltraMetricCard
+                      value={stats?.averageScore || 0}
+                      max={100}
+                      label="Digital Maturity Score"
+                      trend={stats?.scoreTrend || 0}
+                      gradient="from-blue-500 via-cyan-500 to-blue-600"
+                      precision={1}
+                    />
+                    <UltraMetricCard
+                      value={stats?.totalSubmissions || 0}
+                      label="Team Assessments"
+                      trend={stats?.submissionsTrend || 0}
+                      gradient="from-emerald-500 via-green-500 to-emerald-600"
+                      suffix="completed"
+                    />
+                  </div>
 
-              {/* Progress Visualization */}
-              <div className="mt-8">
-                <div className="flex justify-between text-sm text-gray-600 mb-3">
-                  <span>Growth Progress</span>
-                  <span>{stats?.averageScore || 0}% Complete</span>
-                </div>
-                <div className="w-full bg-gray-200/60 rounded-full h-3">
-                  <div 
-                    className="bg-gradient-to-r from-blue-500 to-cyan-500 h-3 rounded-full transition-all duration-1000 relative overflow-hidden"
-                    style={{ width: `${stats?.averageScore || 0}%` }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer"></div>
+                  {/* Premium Progress Bar */}
+                  <div className="mt-8">
+                    <div className="flex justify-between text-sm text-white/70 mb-3">
+                      <span className="font-semibold">Quarterly Growth Target</span>
+                      <span className="font-bold text-white">{stats?.averageScore || 0}% Achieved</span>
+                    </div>
+                    <div className="relative h-4 bg-white/5 rounded-full overflow-hidden backdrop-blur-xl border border-white/10">
+                      <div 
+                        className={`absolute inset-y-0 left-0 bg-gradient-to-r ${performanceBadge.color} rounded-full transition-all duration-1000 relative overflow-hidden`}
+                        style={{ width: `${stats?.averageScore || 0}%` }}
+                      >
+                        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer"></div>
+                      </div>
+                      {/* Milestone Markers */}
+                      {[25, 50, 75].map((milestone) => (
+                        <div 
+                          key={milestone}
+                          className="absolute top-0 bottom-0 w-px bg-white/30"
+                          style={{ left: `${milestone}%` }}
+                        >
+                          <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-white/40">{milestone}%</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Performance Insights */}
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border border-gray-200/60 shadow-xl hover:shadow-2xl transition-all duration-500">
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-6 flex items-center gap-3">
-              <Sparkles className="w-6 h-6 text-yellow-500" />
-              AI Insights
-            </h3>
-            
-            <div className="space-y-4">
-              {stats?.performanceInsights.map((insight, index) => (
-                <InsightCard
-                  key={index}
-                  title={insight.title}
-                  description={insight.description}
-                  impact={insight.impact}
-                  trend={insight.trend}
-                />
-              ))}
-            </div>
+          {/* AI Insights Premium */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+            <div className="relative backdrop-blur-2xl bg-slate-900/60 border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-500 h-full">
+              <h3 className="text-3xl font-black bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent mb-6 flex items-center gap-3">
+                <Sparkles className="w-7 h-7 text-yellow-400 animate-pulse" />
+                AI Insights
+              </h3>
+              
+              <div className="space-y-4">
+                {stats?.performanceInsights.map((insight, index) => (
+                  <UltraInsightCard
+                    key={index}
+                    title={insight.title}
+                    description={insight.description}
+                    impact={insight.impact}
+                    trend={insight.trend}
+                    index={index}
+                  />
+                ))}
+              </div>
 
-            <button className="w-full mt-6 bg-gradient-to-r from-gray-900 to-gray-700 text-white py-3 rounded-xl font-semibold hover:from-gray-800 hover:to-gray-600 transition-all flex items-center justify-center gap-2 group">
-              View Detailed Analysis
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+              <button className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group/btn shadow-lg shadow-purple-500/50 hover:shadow-pink-500/50 hover:scale-105">
+                View AI Analysis
+                <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Action Grid & Activity */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Quick Actions */}
+        {/* Elite Action Cards & Activity */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Premium Tools */}
           <div className="xl:col-span-2">
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-6">
-              Growth Tools
+            <h3 className="text-3xl font-black bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-transparent mb-6 flex items-center gap-3">
+              <Rocket className="w-7 h-7 text-cyan-400" />
+              Growth Arsenal
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <EliteActionCard
+              <UltraActionCard
                 title="Digital Scorecard"
-                description="Deep dive into your growth metrics with interactive analytics"
+                description="Deep-dive analytics with real-time intelligence and predictive insights"
                 icon="📊"
-                gradient="from-blue-500 to-cyan-500"
+                gradient="from-blue-500 via-cyan-500 to-blue-600"
                 onClick={() => router.push('/client-portal/scorecard')}
-                status="updated"
+                status="LIVE"
+                badge="Popular"
               />
-              <EliteActionCard
+              <UltraActionCard
                 title="Funnel Intelligence"
-                description="AI-powered funnel analysis and optimization recommendations"
+                description="AI-powered funnel optimization with conversion acceleration strategies"
                 icon="🔍"
-                gradient="from-purple-500 to-pink-500"
+                gradient="from-purple-500 via-pink-500 to-purple-600"
                 onClick={() => router.push('/client-portal/funnel-analysis')}
-                status="new"
+                status="NEW"
+                badge="AI-Powered"
               />
-			<EliteActionCard
-  title="Executive Reports"
-  description="Download comprehensive PDF reports and insights" 
-  icon="📄"
-  gradient="from-green-500 to-emerald-500"
-  onClick={() => router.push('/client-portal/reports')}
-/>
-              <EliteActionCard
+              <UltraActionCard
+                title="Executive Reports"
+                description="White-label PDF reports with executive summaries and action plans" 
+                icon="📄"
+                gradient="from-emerald-500 via-green-500 to-emerald-600"
+                onClick={() => router.push('/client-portal/reports')}
+                status="UPDATED"
+                badge="Premium"
+              />
+              <UltraActionCard
                 title="Growth Strategy"
-                description="Personalized recommendations and implementation roadmap"
+                description="Personalized roadmap with implementation timelines and ROI projections"
                 icon="🚀"
-                gradient="from-orange-500 to-red-500"
+                gradient="from-orange-500 via-red-500 to-orange-600"
                 onClick={() => router.push('/client-portal/recommendations')}
+                badge="Strategic"
               />
             </div>
           </div>
 
-          {/* Recent Activity */}
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border border-gray-200/60 shadow-xl hover:shadow-2xl transition-all duration-500">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent flex items-center gap-3">
-                <MessageSquare className="w-6 h-6 text-blue-500" />
-                Team Activity
-              </h3>
-              <Filter className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600" />
-            </div>
-            
-            <div className="space-y-4">
-              {stats?.recentActivity.map((activity) => (
-                <ActivityItem
-                  key={activity.id}
-                  user={activity.user}
-                  action={activity.action}
-                  timestamp={activity.timestamp}
-                  avatar={activity.avatar}
-                  priority={activity.priority}
-                />
-              ))}
-            </div>
+          {/* Premium Activity Feed */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-cyan-500/20 to-blue-500/20 rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+            <div className="relative backdrop-blur-2xl bg-slate-900/60 border border-white/10 rounded-3xl p-8 hover:border-white/20 transition-all duration-500 h-full">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-black bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent flex items-center gap-3">
+                  <Activity className="w-6 h-6 text-blue-400" />
+                  Live Activity
+                </h3>
+                <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
+                  <Filter className="w-4 h-4 text-white/70" />
+                </button>
+              </div>
+              
+              <div className="space-y-4 mb-6">
+                {stats?.recentActivity.map((activity, index) => (
+                  <UltraActivityItem
+                    key={activity.id}
+                    user={activity.user}
+                    action={activity.action}
+                    timestamp={activity.timestamp}
+                    avatar={activity.avatar}
+                    priority={activity.priority}
+                    index={index}
+                  />
+                ))}
+              </div>
 
-            <button className="w-full mt-6 border-2 border-gray-300/60 text-gray-700 py-3 rounded-xl font-semibold hover:border-gray-400 hover:bg-gray-50/50 transition-all flex items-center justify-center gap-2 group">
-              View All Activity
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+              <button className="w-full border-2 border-white/10 hover:border-cyan-500/50 bg-white/5 hover:bg-cyan-500/10 text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group/btn backdrop-blur-xl">
+                View All Activity
+                <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+              </button>
+            </div>
           </div>
         </div>
       </main>
 
-      {/* Floating Action Button */}
+      {/* Ultra Floating Action Button */}
       <div className="fixed bottom-8 right-8 z-40">
-        <button className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-4 rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 group">
-          <Rocket className="w-6 h-6 group-hover:animate-bounce" />
-        </button>
+        <div className="relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
+          <button className="relative bg-gradient-to-r from-cyan-500 to-blue-500 text-white p-4 rounded-2xl shadow-2xl hover:shadow-cyan-500/50 transition-all duration-300 hover:scale-110 group overflow-hidden">
+            <Rocket className="w-6 h-6 group-hover:animate-bounce relative z-10" />
+            <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer"></div>
+          </button>
+        </div>
       </div>
+
+      {/* Add Styles */}
+      <style jsx global>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-10px) rotate(2deg); }
+        }
+        @keyframes wave {
+          0%, 100% { transform: rotate(0deg); }
+          25% { transform: rotate(15deg); }
+          75% { transform: rotate(-15deg); }
+        }
+        @keyframes shimmer {
+          0% { background-position: -100% 0; }
+          100% { background-position: 200% 0; }
+        }
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+          50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
+        }
+        @keyframes wiggle {
+          0%, 100% { transform: rotate(0deg); }
+          25% { transform: rotate(-10deg); }
+          75% { transform: rotate(10deg); }
+        }
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+        .animate-wave {
+          animation: wave 1s ease-in-out infinite;
+        }
+        .animate-shimmer {
+          animation: shimmer 2s linear infinite;
+        }
+        .animate-glow {
+          animation: glow 2s ease-in-out infinite;
+        }
+        .animate-wiggle {
+          animation: wiggle 0.5s ease-in-out;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+      `}</style>
     </div>
   );
 }
 
-// Elite Loading Screen
+// Ultra Loading Screen
 function EliteLoadingScreen({ companyName }: { companyName: string }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-      <div className="text-center">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 flex items-center justify-center relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse animation-delay-2000"></div>
+      </div>
+      
+      <div className="relative z-10 text-center">
         <div className="relative mb-8">
-          <div className="w-20 h-20 border-t-4 border-b-4 border-cyan-400 rounded-full animate-spin mx-auto"></div>
-          <Sparkles className="w-8 h-8 text-cyan-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+          {/* Spinning Ring */}
+          <div className="w-24 h-24 border-4 border-transparent border-t-cyan-400 border-r-blue-400 rounded-full animate-spin mx-auto"></div>
+          {/* Center Icon */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <Sparkles className="w-10 h-10 text-cyan-400 animate-pulse" />
+          </div>
+          {/* Glow Effect */}
+          <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-2xl animate-pulse"></div>
         </div>
-        <h3 className="text-2xl font-bold text-white mb-3">Initializing Elite Portal</h3>
-        <p className="text-cyan-200 mb-6">Loading {companyName} analytics suite</p>
         
+        <h3 className="text-3xl font-black bg-gradient-to-r from-white via-blue-200 to-cyan-200 bg-clip-text text-transparent mb-3">
+          Initializing Elite Portal
+        </h3>
+        <p className="text-cyan-300 mb-8 text-lg">
+          Loading <span className="font-bold text-white">{companyName}</span> intelligence suite
+        </p>
+        
+        {/* Loading Dots */}
         <div className="flex justify-center gap-2">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"
+              className="w-3 h-3 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full animate-pulse shadow-lg shadow-cyan-500/50"
               style={{ animationDelay: `${i * 0.2}s` }}
             ></div>
           ))}
@@ -488,155 +636,165 @@ function EliteLoadingScreen({ companyName }: { companyName: string }) {
   );
 }
 
-
-// Supporting Components
-function QuickStat({ label, value, trend, change, icon }: any) {
-  const trendColors = {
-    up: 'text-green-600 bg-green-50',
-    down: 'text-red-600 bg-red-50',
-    stable: 'text-blue-600 bg-blue-50'
-  };
-
+// Ultra Quick Stat Component
+function UltraQuickStat({ label, value, trend, change, icon: Icon, gradient }: any) {
   return (
-    <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/40 hover:bg-white/80 transition-all group hover:scale-105">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-sm text-gray-600">{label}</div>
-        <div className={`p-1.5 rounded-lg ${trendColors[trend]}`}>
-          {icon}
+    <div className="relative group">
+      <div className={`absolute inset-0 bg-gradient-to-r ${gradient} rounded-2xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity`}></div>
+      <div className="relative backdrop-blur-2xl bg-slate-900/60 border border-white/10 rounded-2xl p-5 hover:border-white/20 transition-all duration-300 group-hover:scale-105">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm text-white/60 font-semibold">{label}</div>
+          <div className={`p-2 rounded-xl bg-gradient-to-r ${gradient} shadow-lg`}>
+            <Icon className="w-4 h-4 text-white" />
+          </div>
         </div>
-      </div>
-      <div className="flex items-end justify-between">
-        <div className="text-2xl font-bold text-gray-900">{value}</div>
-        <div className={`text-xs font-semibold ${trendColors[trend].split(' ')[0]}`}>
-          {change}
+        <div className="flex items-end justify-between">
+          <div className="text-3xl font-black text-white">{value}</div>
+          <div className={`text-xs font-bold ${trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-blue-400'} flex items-center gap-1`}>
+            {trend === 'up' ? '↗' : trend === 'down' ? '↘' : '→'} {change}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function MetricCard({ value, max, label, trend, color, precision = 0, suffix }: any) {
-  const colorClasses = {
-    blue: 'from-blue-500 to-cyan-500',
-    green: 'from-green-500 to-emerald-500',
-    purple: 'from-purple-500 to-pink-500'
-  };
-
+// Ultra Metric Card
+function UltraMetricCard({ value, max, label, trend, gradient, precision = 0, suffix }: any) {
   return (
-    <div className="text-center group hover:scale-105 transition-transform duration-300">
-      <div className={`text-5xl font-bold bg-gradient-to-r ${colorClasses[color]} bg-clip-text text-transparent mb-2`}>
-        {precision > 0 ? value.toFixed(precision) : value}
-        {max && <span className="text-2xl text-gray-400">/{max}</span>}
-      </div>
-      <div className="text-sm text-gray-600 mb-1">{label}</div>
-      <div className={`text-xs font-semibold ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-        {trend > 0 ? '↗' : '↘'} {Math.abs(trend)}% {suffix}
+    <div className="relative group">
+      <div className={`absolute inset-0 bg-gradient-to-r ${gradient} rounded-2xl blur-2xl opacity-20 group-hover:opacity-40 transition-opacity`}></div>
+      <div className="relative text-center p-6 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-500 group-hover:scale-105">
+        <div className={`text-6xl font-black bg-gradient-to-r ${gradient} bg-clip-text text-transparent mb-3`}>
+          {precision > 0 ? value.toFixed(precision) : value}
+          {max && <span className="text-3xl text-white/30">/{max}</span>}
+        </div>
+        <div className="text-sm text-white/70 font-semibold mb-2">{label}</div>
+        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold ${trend > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+          {trend > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+          {Math.abs(trend)}% {suffix}
+        </div>
       </div>
     </div>
   );
 }
 
-function InsightCard({ title, description, impact, trend }: any) {
-  const impactColors = {
-    high: 'border-l-red-400 bg-red-50/50',
-    medium: 'border-l-yellow-400 bg-yellow-50/50',
-    low: 'border-l-blue-400 bg-blue-50/50'
+// Ultra Insight Card
+function UltraInsightCard({ title, description, impact, trend, index }: any) {
+  const impactConfig = {
+    high: { gradient: 'from-red-500 to-pink-500', glow: 'shadow-red-500/50' },
+    medium: { gradient: 'from-yellow-500 to-orange-500', glow: 'shadow-yellow-500/50' },
+    low: { gradient: 'from-blue-500 to-cyan-500', glow: 'shadow-blue-500/50' }
   };
 
-  const trendIcons = {
-    up: <TrendingUp className="w-4 h-4 text-green-500" />,
-    down: <TrendingUp className="w-4 h-4 text-red-500 transform rotate-180" />,
-    stable: <div className="w-4 h-1 bg-gray-400 rounded" />
-  };
+  const config = impactConfig[impact];
 
   return (
-    <div className={`border-l-4 ${impactColors[impact]} p-4 rounded-r-xl group hover:scale-102 transition-transform`}>
-      <div className="flex items-start justify-between mb-2">
-        <h4 className="font-semibold text-gray-900 text-sm">{title}</h4>
-        {trendIcons[trend]}
-      </div>
-      <p className="text-xs text-gray-600 leading-relaxed">{description}</p>
-    </div>
-  );
-}
-
-function EliteActionCard({ title, description, icon, gradient, onClick, status }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className={`bg-gradient-to-br ${gradient} text-white p-6 rounded-2xl text-left group hover:scale-105 transition-all duration-300 relative overflow-hidden shadow-lg hover:shadow-2xl`}
+    <div 
+      className="relative group"
+      style={{ animationDelay: `${index * 100}ms` }}
     >
-      {/* Status Badge */}
-      {status && (
-        <div className="absolute top-4 right-4 bg-white/20 text-white/90 text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-          {status}
+      <div className={`absolute inset-0 bg-gradient-to-r ${config.gradient} rounded-xl blur-lg opacity-0 group-hover:opacity-30 transition-opacity`}></div>
+      <div className={`relative bg-white/5 backdrop-blur-xl border-l-4 border-t border-r border-b border-white/10 p-4 rounded-r-xl hover:bg-white/10 transition-all duration-300 overflow-hidden group-hover:scale-102`}
+        style={{ borderLeftColor: config.gradient.split(' ')[0].replace('from-', '') }}
+      >
+        <div className="flex items-start justify-between mb-2">
+          <h4 className="font-bold text-white text-sm pr-2">{title}</h4>
+          <div className={`p-1.5 rounded-lg bg-gradient-to-r ${config.gradient} shadow-lg ${config.glow}`}>
+            {trend === 'up' ? (
+              <TrendingUp className="w-4 h-4 text-white" />
+            ) : trend === 'down' ? (
+              <TrendingDown className="w-4 h-4 text-white" />
+            ) : (
+              <div className="w-4 h-1 bg-white rounded" />
+            )}
+          </div>
         </div>
-      )}
-      
-      <div className="text-3xl mb-4 transform group-hover:scale-110 transition-transform duration-300">
-        {icon}
+        <p className="text-xs text-white/60 leading-relaxed">{description}</p>
       </div>
-      <h4 className="font-bold text-lg mb-2">{title}</h4>
-      <p className="text-white/80 text-sm leading-relaxed mb-4">{description}</p>
-      <div className="flex items-center text-sm font-semibold opacity-90 group-hover:opacity-100">
-        Explore <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-      </div>
-      
-      {/* Shimmer Effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-    </button>
+    </div>
   );
 }
 
-function ActivityItem({ user, action, timestamp, avatar, priority }: any) {
-  const priorityColors = {
-    high: 'bg-red-100 text-red-700 border-red-200',
-    medium: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    low: 'bg-blue-100 text-blue-700 border-blue-200'
+// Ultra Action Card
+function UltraActionCard({ title, description, icon, gradient, onClick, status, badge }: any) {
+  return (
+    <div className="relative group">
+      <div className={`absolute inset-0 bg-gradient-to-r ${gradient} rounded-3xl blur-2xl opacity-30 group-hover:opacity-50 transition-opacity`}></div>
+      <button
+        onClick={onClick}
+        className={`relative w-full bg-gradient-to-br ${gradient} text-white p-8 rounded-3xl text-left group-hover:scale-105 transition-all duration-500 overflow-hidden shadow-2xl`}
+      >
+        {/* Animated Grid Background */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:20px_20px] opacity-50"></div>
+        
+        {/* Badges */}
+        <div className="absolute top-4 right-4 flex gap-2">
+          {status && (
+            <div className="bg-white/20 backdrop-blur-xl text-white/90 text-xs px-3 py-1 rounded-full font-bold border border-white/30">
+              {status}
+            </div>
+          )}
+          {badge && (
+            <div className="bg-white text-gray-900 text-xs px-3 py-1 rounded-full font-bold shadow-lg">
+              {badge}
+            </div>
+          )}
+        </div>
+        
+        <div className="relative z-10">
+          <div className="text-5xl mb-6 transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+            {icon}
+          </div>
+          <h4 className="font-black text-2xl mb-3">{title}</h4>
+          <p className="text-white/80 text-sm leading-relaxed mb-6">{description}</p>
+          <div className="flex items-center text-sm font-bold opacity-90 group-hover:opacity-100">
+            Launch Tool 
+            <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-2 transition-transform" />
+          </div>
+        </div>
+        
+        {/* Shimmer Effect */}
+        <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%)] bg-[length:250%_250%] opacity-0 group-hover:opacity-100 animate-shimmer"></div>
+      </button>
+    </div>
+  );
+}
+
+// Ultra Activity Item
+function UltraActivityItem({ user, action, timestamp, avatar, priority, index }: any) {
+  const priorityConfig = {
+    high: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', dot: 'bg-red-500' },
+    medium: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', dot: 'bg-yellow-500' },
+    low: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30', dot: 'bg-blue-500' }
   };
 
+  const config = priorityConfig[priority];
+
   return (
-    <div className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50/50 transition-all group">
-      <div className="w-10 h-10 bg-gradient-to-br from-gray-200 to-gray-300 rounded-xl flex items-center justify-center text-sm font-semibold text-gray-600 flex-shrink-0">
-        {avatar}
+    <div 
+      className="flex items-start gap-3 p-4 rounded-2xl hover:bg-white/5 transition-all group backdrop-blur-xl border border-white/5 hover:border-white/10"
+      style={{ animationDelay: `${index * 50}ms` }}
+    >
+      <div className="relative">
+        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0 shadow-lg">
+          {avatar}
+        </div>
+        <div className={`absolute -bottom-1 -right-1 w-4 h-4 ${config.dot} rounded-full border-2 border-slate-900 animate-pulse`}></div>
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="font-semibold text-gray-900 text-sm">{user}</div>
-          <span className={`text-xs px-2 py-0.5 rounded-full border ${priorityColors[priority]}`}>
-            {priority}
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="font-bold text-white text-sm">{user}</div>
+          <span className={`text-xs px-2 py-0.5 rounded-full border ${config.bg} ${config.text} ${config.border} font-bold`}>
+            {priority.toUpperCase()}
           </span>
         </div>
-        <p className="text-gray-600 text-sm leading-relaxed">{action}</p>
-        <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+        <p className="text-white/70 text-sm leading-relaxed mb-2">{action}</p>
+        <div className="text-xs text-white/40 flex items-center gap-1.5">
           <Clock className="w-3 h-3" />
-          {new Date(timestamp).toLocaleDateString()} • {new Date(timestamp).toLocaleTimeString()}
+          {new Date(timestamp).toLocaleString()}
         </div>
       </div>
     </div>
   );
-}
-
-// Add CSS for wave animation
-const styles = `
-  @keyframes wave {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(10deg); }
-    75% { transform: rotate(-10deg); }
-  }
-  .animate-wave {
-    animation: wave 1s ease-in-out infinite;
-  }
-  
-  @keyframes shimmer {
-    0% { transform: translateX(-100%) skewX(-12deg); }
-    100% { transform: translateX(200%) skewX(-12deg); }
-  }
-`;
-
-// Add styles to document
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement('style');
-  styleSheet.innerText = styles;
-  document.head.appendChild(styleSheet);
 }
