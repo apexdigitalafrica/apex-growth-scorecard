@@ -64,9 +64,9 @@ export default function Login() {
   }
 
   const handleAdminRequest = () => {
-  // Redirect to admin request page or open contact modal
-  window.open('mailto:support@apexdigitalafrica.com?subject=Admin%20Access%20Request&body=Please%20provide%20details%20about%20your%20request%20for%20admin%20access.', '_blank')
-}
+    // Redirect to admin request page or open contact modal
+    window.open('mailto:support@apexdigitalafrica.com?subject=Admin%20Access%20Request&body=Please%20provide%20details%20about%20your%20request%20for%20admin%20access.', '_blank')
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -213,30 +213,28 @@ export default function Login() {
               )}
             </button>
           </div>
+{/* Registration Links */}
+<div className="grid grid-cols-1 gap-3 pt-4 border-t border-gray-200">
+  {/* Client Registration */}
+  <button
+    type="button"
+    onClick={handleClientSignup}
+    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 border-blue-200 text-blue-700 rounded-xl hover:bg-blue-50 transition-all duration-200 group"
+  >
+    <Plus className="w-4 h-4" />
+    <span className="font-medium">Create Client Account</span>
+  </button>
 
-          {/* Registration Links */}
-          <div className="grid grid-cols-1 gap-3 pt-4 border-t border-gray-200">
-            {/* Client Registration */}
-            <button
-              type="button"
-              onClick={handleClientSignup}
-              className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 border-blue-200 text-blue-700 rounded-xl hover:bg-blue-50 transition-all duration-200 group"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="font-medium">Create Client Account</span>
-            </button>
-
-            {/* Admin Access Request */}
-            <button
-              type="button"
-              onClick={handleAdminRequest}
-              className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 border-purple-200 text-purple-700 rounded-xl hover:bg-purple-50 transition-all duration-200 group"
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span className="font-medium">Request Admin Access</span>
-            </button>
-          </div>
-
+  {/* Admin Access Request */}
+  <button
+    type="button"
+    onClick={() => window.open('mailto:support@apexdigitalafrica.com?subject=Admin%20Access%20Request&body=Please%20provide%20details%20about%20your%20request%20for%20admin%20access.', '_blank')}
+    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 border-purple-200 text-purple-700 rounded-xl hover:bg-purple-50 transition-all duration-200 group"
+  >
+    <HelpCircle className="w-4 h-4" />
+    <span className="font-medium">Request Admin Access</span>
+  </button>
+</div>
           {/* Help Text */}
           <div className="text-center pt-2">
             <p className="text-xs text-gray-500">
