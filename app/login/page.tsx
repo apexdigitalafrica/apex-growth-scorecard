@@ -59,13 +59,42 @@ export default function Login() {
   }
 
   const handleClientSignup = () => {
-    // Redirect to client registration page
     router.push('/register/client')
   }
 
-  const handleAdminRequest = () => {
-    // Redirect to admin request page or open contact modal
-    window.open('mailto:support@apexdigitalafrica.com?subject=Admin%20Access%20Request&body=Please%20provide%20details%20about%20your%20request%20for%20admin%20access.', '_blank')
+  const handleAdminRequest = async () => {
+    const userEmail = prompt('Please enter your email address:')
+    if (!userEmail) return
+
+    const fullName = prompt('Please enter your full name:')
+    if (!fullName) return
+
+    const message = prompt('Please describe why you need admin access:')
+    
+    try {
+      setLoading(true)
+      const response = await fetch('/api/auth/admin-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contact_email: userEmail,
+          full_name: fullName,
+          message: message || 'No additional details provided'
+        })
+      })
+
+      const data = await response.json()
+      
+      if (response.ok) {
+        alert('✅ Admin access request submitted successfully! We will contact you shortly.')
+      } else {
+        alert('❌ Failed to submit request: ' + (data.error || 'Please try again or contact support.'))
+      }
+    } catch (error) {
+      alert('❌ Failed to submit request. Please try again or contact support.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -213,28 +242,30 @@ export default function Login() {
               )}
             </button>
           </div>
-{/* Registration Links */}
-<div className="grid grid-cols-1 gap-3 pt-4 border-t border-gray-200">
-  {/* Client Registration */}
-  <button
-    type="button"
-    onClick={handleClientSignup}
-    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 border-blue-200 text-blue-700 rounded-xl hover:bg-blue-50 transition-all duration-200 group"
-  >
-    <Plus className="w-4 h-4" />
-    <span className="font-medium">Create Client Account</span>
-  </button>
 
-  {/* Admin Access Request */}
-  <button
-    type="button"
-    onClick={() => window.open('mailto:support@apexdigitalafrica.com?subject=Admin%20Access%20Request&body=Please%20provide%20details%20about%20your%20request%20for%20admin%20access.', '_blank')}
-    className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 border-purple-200 text-purple-700 rounded-xl hover:bg-purple-50 transition-all duration-200 group"
-  >
-    <HelpCircle className="w-4 h-4" />
-    <span className="font-medium">Request Admin Access</span>
-  </button>
-</div>
+          {/* Registration Links */}
+          <div className="grid grid-cols-1 gap-3 pt-4 border-t border-gray-200">
+            {/* Client Registration */}
+            <button
+              type="button"
+              onClick={handleClientSignup}
+              className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 border-blue-200 text-blue-700 rounded-xl hover:bg-blue-50 transition-all duration-200 group"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="font-medium">Create Client Account</span>
+            </button>
+
+            {/* Admin Access Request */}
+            <button
+              type="button"
+              onClick={handleAdminRequest}
+              className="flex items-center justify-center gap-2 w-full py-2.5 px-4 border-2 border-purple-200 text-purple-700 rounded-xl hover:bg-purple-50 transition-all duration-200 group"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span className="font-medium">Request Admin Access</span>
+            </button>
+          </div>
+
           {/* Help Text */}
           <div className="text-center pt-2">
             <p className="text-xs text-gray-500">
