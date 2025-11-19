@@ -1,16 +1,26 @@
 // lib/session-client.ts
-'use client';
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ClientUser } from './client-auth';
+
+interface ClientUser {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  client: {
+    company_name: string;
+    primary_color?: string;
+    logo_url?: string;
+  };
+}
 
 interface AuthState {
   clientUser: ClientUser | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (user: ClientUser) => void;
   logout: () => void;
-  isLoading: boolean;
+  setLoading: (loading: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -18,37 +28,13 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       clientUser: null,
       isAuthenticated: false,
-      isLoading: false,
-      login: (user: ClientUser) => set({ 
-        clientUser: user, 
-        isAuthenticated: true 
-      }),
-      logout: () => set({ 
-        clientUser: null, 
-        isAuthenticated: false 
-      }),
+      isLoading: true,
+      login: (user) => set({ clientUser: user, isAuthenticated: true, isLoading: false }),
+      logout: () => set({ clientUser: null, isAuthenticated: false, isLoading: false }),
+      setLoading: (loading) => set({ isLoading: loading }),
     }),
     {
-      name: 'client-auth-storage',
+      name: 'apex-client-auth',
     }
   )
 );
-
-// Session utilities
-export function getStoredUser(): ClientUser | null {
-  if (typeof window === 'undefined') return null;
-  const stored = localStorage.getItem('client-auth-storage');
-  if (!stored) return null;
-  
-  try {
-    const data = JSON.parse(stored);
-    return data.state.clientUser || null;
-  } catch {
-    return null;
-  }
-}
-
-export function clearStoredUser(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem('client-auth-storage');
-}

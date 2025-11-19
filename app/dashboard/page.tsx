@@ -35,7 +35,16 @@ import {
 } from 'lucide-react';
 
 import AIGrowthChatbot from '@/components/AIGrowthChatbot';
+import { useAuthStore } from '@/lib/session-client';
+import { useRouter } from 'next/navigation';
 
+const { logout } = useAuthStore();
+const router = useRouter();
+
+const handleLogout = () => {
+  logout();
+  router.push('/client-portal/login');
+};
 // Types & Interfaces
 interface DashboardStats {
   totalSubmissions: number;
