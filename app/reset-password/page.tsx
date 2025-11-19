@@ -6,7 +6,14 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Lock, Shield, CheckCircle, Eye, EyeOff } from 'lucide-react'
+import { CheckCircle, Shield, Eye, EyeOff } from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
+
+// Create a browser Supabase client using public env vars
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+)
 
 function ResetPasswordInner() {
   const [password, setPassword] = useState('')
@@ -16,32 +23,82 @@ function ResetPasswordInner() {
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [sessionReady, setSessionReady] = useState(false)
+
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Check if we have a valid reset token
+  // On mount: validate link and set Supabase session from hash/query
   useEffect(() => {
-  let token = searchParams.get('token')
-  let type = searchParams.get('type')
+    const prepareSession = async () => {
+      try {
+        let token = searchParams.get('token')
+        let type = searchParams.get('type')
+        let accessToken: string | null = null
+        let refreshToken: string | null = null
 
-  if ((!token || !type) && typeof window !== 'undefined') {
-    const hash = window.location.hash
-    if (hash) {
-      const hashParams = new URLSearchParams(hash.replace(/^#/, ''))
-      token = token ?? hashParams.get('access_token')
-      type = type ?? hashParams.get('type')
+        // Supabase usually sends everything in the hash:
+        // #access_token=...&refresh_token=...&type=recovery
+        if (typeof window !== 'undefined') {
+          const hash = window.location.hash // "#access_token=...&type=recovery..."
+          if (hash) {
+            const hashParams = new URLSearchParams(hash.replace(/^#/, ''))
+            // Prefer token from query, but fall back to hash
+            token = token ?? hashParams.get('access_token')
+            type = type ?? hashParams.get('type')
+            accessToken = hashParams.get('access_token')
+            refreshToken = hashParams.get('refresh_token')
+          }
+        }
+
+        if (type !== 'recovery' || !token) {
+          setError(
+            'Invalid or expired reset link. Please request a new password reset.'
+          )
+          return
+        }
+
+        // If we have tokens, set the Supabase session so updateUser will work
+        if (accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+
+          if (sessionError) {
+            console.error('Failed to set Supabase session:', sessionError)
+            setError(
+              'Unable to start a secure reset session. Please request a new reset link.'
+            )
+            return
+          }
+        }
+
+        setSessionReady(true)
+      } catch (e) {
+        console.error('Error preparing reset session:', e)
+        setError(
+          'Something went wrong with this reset link. Please request a new one.'
+        )
+      }
     }
-  }
 
-  if (type !== 'recovery' || !token) {
-    setError('Invalid or expired reset link. Please request a new password reset.')
-  }
-}, [searchParams])
+    prepareSession()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    if (!sessionReady) {
+      setError(
+        'Your reset session is not ready yet. Please refresh the page or request a new reset link.'
+      )
+      setLoading(false)
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -56,7 +113,18 @@ function ResetPasswordInner() {
     }
 
     try {
-      // Supabase handles the password reset automatically when the user lands on this page
+      // THIS is the real Supabase password update
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
+      })
+
+      if (updateError) {
+        console.error('Supabase updateUser error:', updateError)
+        setError(updateError.message || 'Failed to update password')
+        setLoading(false)
+        return
+      }
+
       setSuccess(true)
 
       // Redirect to login after success
@@ -64,6 +132,7 @@ function ResetPasswordInner() {
         router.push('/login')
       }, 3000)
     } catch (err) {
+      console.error('Reset password error:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
@@ -81,7 +150,8 @@ function ResetPasswordInner() {
             Password Updated!
           </h2>
           <p className="text-gray-600 mb-6">
-            Your password has been successfully reset. You will be redirected to the login page shortly.
+            Your password has been successfully reset. You will be redirected to
+            the login page shortly.
           </p>
           <button
             onClick={() => router.push('/login')}
@@ -122,7 +192,10 @@ function ResetPasswordInner() {
           )}
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               New Password
             </label>
             <div className="relative">
@@ -143,14 +216,23 @@ function ResetPasswordInner() {
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Must be at least 6 characters
+            </p>
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Confirm New Password
             </label>
             <div className="relative">
@@ -169,9 +251,15 @@ function ResetPasswordInner() {
               <button
                 type="button"
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                onClick={() =>
+                  setShowConfirmPassword(!showConfirmPassword)
+                }
               >
-                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                {showConfirmPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
               </button>
             </div>
           </div>
