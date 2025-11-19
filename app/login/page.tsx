@@ -22,49 +22,63 @@ export default function Login() {
     setMounted(true)
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setLoading(true)
+  setError('')
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email, 
-          password,
-          loginType
-        }),
-      })
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        loginType,
+      }),
+    })
 
-      const data = await response.json()
+    const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed')
-      }
+    if (!response.ok) {
+      throw new Error(data.error || 'Authentication failed')
+    }
 
-      // Login to unified store
-      login(data.user)
-      
-      // Determine user role, fallback to permissions check
-      const userRole = data.user.role ?? (data.user.permissions?.includes('admin') ? 'admin' : 'client');
+    // Save user in unified store (Zustand)
+    login(data.user)
 
-      // Redirect based on role
+    // Determine user role, fallback to permissions / client
+    const userRole: 'admin' | 'client' =
+      data.user.role ??
+      (data.user.permissions?.includes('admin') ? 'admin' : 'client')
+
+    console.log('✅ Login success:', {
+      email,
+      loginType,
+      userRole,
+    })
+
+    // Give the store a tick to update, then redirect
+    setTimeout(() => {
       if (userRole === 'admin') {
         router.replace('/dashboard')
       } else if (userRole === 'client') {
         router.replace('/client-portal/dashboard')
+      } else {
+        // Extra safety fallback (should rarely be hit)
+        router.replace('/dashboard')
       }
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setLoading(false)
-    }
+    }, 50)
+  } catch (err) {
+    console.error('❌ Login error:', err)
+    setError(err instanceof Error ? err.message : 'An error occurred')
+  } finally {
+    setLoading(false)
   }
+}
+
 
   const handleClientSignup = () => {
     router.push('/register/client')
