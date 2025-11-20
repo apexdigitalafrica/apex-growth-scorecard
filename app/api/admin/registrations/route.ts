@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// ONLY REPLACE THE GET FUNCTION — KEEP PATCH AS IS
 export async function GET() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -11,17 +10,29 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data: admin } = await supabase
+  // Check admin permissions by email (since user is in auth.users but permissions are in admin_users)
+  const { data: adminData } = await supabase
     .from('admin_users')
     .select('permissions')
-    .eq('id', user.id)
+    .eq('email', user.email)  // Match by email instead of ID
     .single();
 
-  if (!admin?.permissions?.includes('admin')) {
+  // Handle JSON string permissions
+  let permissions: string[] = [];
+  if (typeof adminData?.permissions === 'string') {
+    try {
+      permissions = JSON.parse(adminData.permissions);
+    } catch (e) {
+      console.error('Failed to parse permissions:', e);
+    }
+  } else if (Array.isArray(adminData?.permissions)) {
+    permissions = adminData.permissions;
+  }
+
+  if (!permissions.includes('admin')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // THIS LINE IS KEY — remove any status filter so you see ALL requests
   const { data: requests, error } = await supabase
     .from('client_registration_requests')
     .select('*')
