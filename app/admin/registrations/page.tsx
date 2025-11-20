@@ -47,43 +47,42 @@ export default function AdminRegistrationsPage() {
   };
 
   useEffect(() => {
-    const init = async () => {
-      await new Promise(r => setTimeout(r, 300)); // tiny delay for auth
+  const init = async () => {
+    if (!user) {
+      router.replace('/login?next=/admin/registrations');
+      return;
+    }
 
-      if (!user) {
-        router.replace('/login?next=/admin/registrations');
-        return;
+    if (!hasAdminAccess()) {
+      setError('You do not have permission to view this page.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/registrations', {
+        method: 'GET',
+        headers: {
+          'x-admin-id': user.id,   
+        },
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Unauthorized');
       }
 
-      if (!hasAdminAccess()) {
-        setError('You do not have permission to view this page.');
-        setLoading(false);
-        return;
-      }
+      const data = await res.json();
+      setRequests(data.requests || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      try {
-        const res = await fetch('/api/admin/registrations', {
-          headers: {
-            'x-admin-id': user.id,   // ← THIS IS REQUIRED NOW
-          },
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || 'Failed to load requests');
-        }
-
-        setRequests(data.requests || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    init();
-  }, [user, router]);
+  init();
+}, [user, router]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     if (!user) return;
