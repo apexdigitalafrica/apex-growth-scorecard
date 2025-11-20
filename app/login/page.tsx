@@ -72,19 +72,37 @@ function LoginInner() {
       }
 
       // Save user in unified store (Zustand)
-      login(data.user)
+     // Login to unified store
+login(data.user)
 
-      // Determine user role, fallback to permissions/client
-      const userRole: 'admin' | 'client' =
-        data.user.role ??
-        (data.user.permissions?.includes('admin') ? 'admin' : 'client')
+// Determine user role, fallback to permissions check
+const userRole: 'admin' | 'client' =
+  data.user.role ??
+  (data.user.permissions?.includes('admin') ? 'admin' : 'client')
 
-      console.log('✅ Login success:', {
-        email,
-        loginType,
-        userRole,
-        nextPath,
-      })
+console.log('✅ Login success', { email, userRole, next })
+
+// Decide where to go
+let redirectTo: string
+
+if (userRole === 'admin') {
+  // If there is a ?next=/admin/... param, respect it
+  if (next && next.startsWith('/admin')) {
+    redirectTo = next
+  } else {
+    // Default admin dashboard – you can change this if you later build /admin/dashboard
+    redirectTo = '/admin/registrations'
+  }
+} else {
+  // Client default
+  redirectTo = '/client-portal/dashboard'
+}
+
+// Small delay so Zustand/session has time to settle
+setTimeout(() => {
+  router.replace(redirectTo)
+}, 50)
+
 
       // Give store a tick to update, then redirect
       setTimeout(() => {
