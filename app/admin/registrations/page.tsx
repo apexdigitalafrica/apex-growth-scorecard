@@ -36,6 +36,8 @@ interface RegistrationRequest {
 }
 
 // 🔹 Approve button component
+// Replace the ApproveClientButton component in your file with this improved version
+
 function ApproveClientButton({
   registrationId,
   onApproved,
@@ -45,13 +47,16 @@ function ApproveClientButton({
 }) {
   const [loading, setLoading] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [isNewUser, setIsNewUser] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleApprove = async () => {
     setLoading(true);
     setError(null);
     setTempPassword(null);
+    setShowSuccess(false);
 
     try {
       const res = await fetch('/api/admin/client-registrations/approve', {
@@ -62,6 +67,8 @@ function ApproveClientButton({
 
       const data = await res.json();
 
+      console.log('✅ Approval response:', data); // Debug log
+
       if (!res.ok) {
         throw new Error(data.error || 'Failed to approve registration');
       }
@@ -70,10 +77,17 @@ function ApproveClientButton({
         onApproved(data.request as RegistrationRequest);
       }
 
+      // Handle both new and existing users
       if (data.tempPassword) {
-        setTempPassword(data.tempPassword as string);
+        setTempPassword(data.tempPassword);
+        setIsNewUser(data.isNewUser !== false); // Default to true if not specified
+        setShowSuccess(true);
+      } else {
+        // Fallback if tempPassword is missing
+        setShowSuccess(true);
       }
     } catch (err: any) {
+      console.error('❌ Approval error:', err);
       setError(err.message || 'Approve failed');
     } finally {
       setLoading(false);
@@ -81,7 +95,7 @@ function ApproveClientButton({
   };
 
   const copyPassword = () => {
-    if (tempPassword) {
+    if (tempPassword && tempPassword !== '(using existing account)') {
       navigator.clipboard.writeText(tempPassword);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -89,16 +103,21 @@ function ApproveClientButton({
   };
 
   return (
-    <div className="flex flex-col gap-3 items-end">
+    <div className="flex flex-col gap-3 items-end w-full sm:w-auto">
       <button
         onClick={handleApprove}
-        disabled={loading}
+        disabled={loading || showSuccess}
         className="px-5 py-2.5 text-sm font-bold rounded-xl border-2 border-transparent text-white bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/50 hover:shadow-emerald-500/70 hover:scale-105 disabled:hover:scale-100"
       >
         {loading ? (
           <span className="flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             Approving...
+          </span>
+        ) : showSuccess ? (
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            Approved ✓
           </span>
         ) : (
           <span className="flex items-center gap-2">
@@ -109,36 +128,84 @@ function ApproveClientButton({
       </button>
 
       {error && (
-        <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-3 py-2 rounded-lg text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" />
-          {error}
+        <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg text-xs flex items-center gap-2 w-full animate-shake">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      {tempPassword && (
-        <div className="bg-amber-500/20 border border-amber-400/50 text-amber-200 px-4 py-3 rounded-xl text-xs space-y-2">
-          <p className="font-medium">Temporary password created:</p>
-          <div className="flex items-center gap-2 bg-slate-900/50 px-3 py-2 rounded-lg">
-            <code className="font-mono text-amber-100 flex-1">{tempPassword}</code>
-            <button
-              onClick={copyPassword}
-              className="p-1.5 hover:bg-amber-500/20 rounded transition"
-              title="Copy password"
-            >
-              {copied ? (
-                <Check className="w-4 h-4 text-green-400" />
-              ) : (
-                <Copy className="w-4 h-4" />
-              )}
-            </button>
+      {showSuccess && !error && (
+        <div className="w-full space-y-2">
+          {/* Success Message */}
+          <div className="bg-emerald-500/20 border border-emerald-400/50 text-emerald-200 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-slide-in">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+            <span className="font-medium">Client approved successfully!</span>
           </div>
-          <p className="text-amber-300/80">Send this to the client securely</p>
+
+          {/* Password Display */}
+          {tempPassword && tempPassword !== '(using existing account)' && (
+            <div className="bg-amber-500/20 border-2 border-amber-400/50 rounded-xl p-4 space-y-3 animate-slide-in w-full">
+              <div className="flex items-center gap-2 text-amber-200">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p className="font-bold text-sm">⚠️ Temporary Password Created</p>
+              </div>
+              
+              <div className="bg-slate-900/50 backdrop-blur-xl px-4 py-3 rounded-lg border border-amber-300/30">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="text-xs text-amber-300/80 font-medium uppercase tracking-wide">
+                    Password
+                  </span>
+                  <button
+                    onClick={copyPassword}
+                    className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 rounded-lg transition-all flex items-center gap-2 text-xs font-medium text-amber-200"
+                    title="Copy password"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-green-400" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+                <code className="font-mono text-base text-amber-100 font-bold block break-all select-all">
+                  {tempPassword}
+                </code>
+              </div>
+
+              <div className="bg-amber-600/20 border border-amber-500/40 rounded-lg p-3 text-xs text-amber-100 space-y-1">
+                <p className="font-semibold">📧 Next Steps:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-amber-200/90 ml-2">
+                  <li>Send this password to the client securely (email/phone)</li>
+                  <li>Ask them to change it after first login</li>
+                  <li>Password will not be shown again</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Existing User Message */}
+          {tempPassword === '(using existing account)' && (
+            <div className="bg-blue-500/20 border border-blue-400/50 text-blue-200 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-slide-in">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Existing user account linked</p>
+                <p className="text-xs text-blue-300/80 mt-1">
+                  This email already has an account. No new password generated.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
-
 export default function AdminRegistrationsPage() {
   const router = useRouter();
   const { user } = useAuthStore();
