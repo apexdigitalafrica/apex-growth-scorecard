@@ -1,7 +1,7 @@
 // app/login/page.tsx
 import LoginClient from '@/components/LoginClient';
 
-// This is the ONLY thing needed to stop Next.js from trying to prerender this page
+// This stops Next.js from trying to prerender the login page
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
