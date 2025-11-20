@@ -95,6 +95,7 @@ export default function AdminRegistrationsPage() {
       const res = await fetch('/api/admin/registrations', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+		'x-admin-id': user.id,
         body: JSON.stringify({
           id,
           action,
