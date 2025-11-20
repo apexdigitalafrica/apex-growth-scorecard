@@ -1,6 +1,6 @@
 'use client';
 export const dynamic = 'force-dynamic';
-
+import { UserPlus, Clock } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { 
@@ -334,7 +334,50 @@ export default function Dashboard() {
             </div>
           </Link>
         </div>
-        
+       const router = useRouter();
+
+return (
+  <div
+    className="max-w-xs rounded-xl bg-gradient-to-r from-purple-700 via-blue-700 to-blue-800 shadow-lg border border-white/20 p-5 flex flex-col items-center hover:bg-purple-700/90 cursor-pointer transition-all group"
+    onClick={() => router.push('/admin/registrations')}
+    title="Review new client registrations"
+    style={{ minWidth: 220 }}
+  >
+    <div className="bg-white/10 rounded-full p-3 mb-2 flex items-center justify-center">
+      <UserPlus className="w-7 h-7 text-blue-200 group-hover:text-white transition-colors" />
+    </div>
+    <div className="font-bold text-white/90 text-lg mb-1 flex items-center gap-2">
+      Review Clients
+      {pendingCount > 0 && (
+        <span className="inline-block bg-amber-400 text-amber-900 font-bold px-2 py-0.5 rounded-full ml-2 text-xs animate-bounce shadow">
+          {pendingCount}
+        </span>
+      )}
+      <Clock className="w-4 h-4 text-amber-300 animate-pulse" />
+    </div>
+    <div className="text-sm text-slate-200 text-center">
+      Pending approvals — click to manage
+    </div>
+  </div>
+);
+{pendingCount > 0 && (
+  <span className="inline-block bg-amber-400 text-amber-900 font-bold px-2 py-0.5 rounded-full ml-2 text-xs animate-bounce shadow">
+    {pendingCount}
+  </span>
+)}
+const [pendingCount, setPendingCount] = useState(0);
+
+useEffect(() => {
+  async function fetchPending() {
+    const res = await fetch('/api/admin/registrations?status=pending');
+    const data = await res.json();
+    if (data.requests) {
+      setPendingCount(data.requests.length);
+    }
+  }
+  fetchPending();
+}, []);
+
         {/* Header Section with Glassmorphism */}
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
