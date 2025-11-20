@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, username, full_name, invitedBy } = await request.json()
+    const { email, username, full_name} = await request.json()
 
     // SECURITY: Only existing admins can create new admins
     const { data: { user } } = await supabaseAdmin.auth.getUser()

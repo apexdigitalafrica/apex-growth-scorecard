@@ -40,9 +40,12 @@ try {
   
   // Create a mock client that throws informative errors
   supabaseAdmin = new Proxy({} as SupabaseClient, {
-    get(_, prop) {
+    get(target, prop) {
+      if (prop === 'then') {
+        return undefined; // Handle Promise resolution
+      }
       throw new Error(
-        `Supabase admin client not initialized. Check environment variables: ${error}`
+        `Supabase admin client not initialized. Check environment variables: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   });

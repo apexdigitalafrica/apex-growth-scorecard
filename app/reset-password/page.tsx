@@ -84,7 +84,7 @@ function ResetPasswordInner() {
     }
 
     prepareSession()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
