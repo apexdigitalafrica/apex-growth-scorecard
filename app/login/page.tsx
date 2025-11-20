@@ -1,7 +1,6 @@
 // app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { createClient } from '@/lib/supabase/server';
 
 export async function POST(req: NextRequest) {
   const { email, password, loginType } = await req.json();
