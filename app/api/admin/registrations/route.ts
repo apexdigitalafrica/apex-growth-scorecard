@@ -44,7 +44,7 @@ export async function PATCH(req: NextRequest) {
   const status = action === 'approve' ? 'approved' : 'rejected';
 
   const { data, error } = await supabase
-    .from('client_registration_requests
+    .from('client_registration_requests')
     .update({
       status,
       reviewed_at: new Date().toISOString(),
