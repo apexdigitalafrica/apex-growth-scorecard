@@ -1,4 +1,3 @@
-// app/api/admin/client-registrations/approve/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
@@ -39,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     // 1️⃣ Load the registration request
     const { data: registration, error: regError } = await supabase
-      .from('client_registration_requests') // ✅ your table
+      .from('client_registration_requests')
       .select('*')
       .eq('id', registrationId)
       .single();
@@ -62,7 +61,7 @@ export async function POST(req: NextRequest) {
     const contactEmail: string | null = registration.contact_email;
     const fullName: string | null =
       registration.full_name || registration.company_name || null;
-    const clientId: string | null = registration.client_id ?? null;
+    let clientId: string | null = registration.client_id ?? null;
     const companyName: string | null = registration.company_name ?? null;
 
     if (!contactEmail) {
@@ -72,17 +71,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ✅ 2️⃣ If client_id is missing, create a client record now
     if (!clientId) {
-      return NextResponse.json(
-        {
-          error:
-            'Registration is missing client_id. Ensure the client record is created first.',
-        },
-        { status: 400 }
-      );
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .insert({
+          company_name: companyName || 'Unnamed Company',
+          contact_email: contactEmail,
+          is_active: true,
+        })
+        .select('id, company_name')
+        .single();
+
+      if (clientError || !client) {
+        console.error('Create client error:', clientError);
+        return NextResponse.json(
+          { error: 'Failed to create client record' },
+          { status: 500 }
+        );
+      }
+
+      clientId = client.id;
+
+      // 🔄 update registration to store this new client_id
+      const { error: updateClientIdError } = await supabase
+        .from('client_registration_requests')
+        .update({ client_id: clientId })
+        .eq('id', registrationId);
+
+      if (updateClientIdError) {
+        console.error('Failed to update registration with client_id:', updateClientIdError);
+        // we don't fail here, because we already have the clientId and can continue
+      }
     }
 
-    // 2️⃣ Create Supabase Auth user
+    // 3️⃣ Create Supabase Auth user
     const password = generateRandomPassword(12);
 
     const { data: authResult, error: authError } =
@@ -107,7 +130,7 @@ export async function POST(req: NextRequest) {
 
     const authUserId = authResult.user.id;
 
-    // 3️⃣ Upsert row into client_users and link auth_user_id
+    // 4️⃣ Upsert row into client_users and link auth_user_id
     const { error: clientUserError } = await supabase
       .from('client_users')
       .upsert(
@@ -130,7 +153,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4️⃣ Mark registration as approved and return updated row
+    // 5️⃣ Mark registration as approved and return updated row
     const { data: updatedRegistration, error: updateRegError } = await supabase
       .from('client_registration_requests')
       .update({
@@ -153,7 +176,7 @@ export async function POST(req: NextRequest) {
         success: true,
         message: 'Client approved and auth user created',
         request: updatedRegistration,
-        tempPassword: password, // show once in UI so you can copy it for the client
+        tempPassword: password,
       },
       { status: 200 }
     );
