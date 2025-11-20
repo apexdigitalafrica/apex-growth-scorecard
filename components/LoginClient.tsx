@@ -29,38 +29,65 @@ export default function LoginClient() {
     if (next) setNextPath(next);
   }, [searchParams]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, loginType }),
-      });
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, loginType }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error || 'Login failed');
-
-      login(data.user);
-
-      const isAdmin = data.user.permissions?.includes('admin') || data.user.role === 'admin';
-      const redirectTo = (nextPath && nextPath.startsWith('/admin') && isAdmin)
-        ? nextPath
-        : isAdmin
-          ? '/admin/registrations'
-          : '/client-portal/dashboard';
-
-      router.replace(redirectTo);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      throw new Error(data.error || 'Login failed');
     }
-  };
+
+    // Optional: pull role from Supabase metadata if you’re setting it there
+    const metaRole =
+      data.user?.user_metadata?.role ??
+      data.user?.app_metadata?.role ??
+      null;
+
+    // Effective role: prefer metadata, fall back to selected loginType
+    const effectiveRole = metaRole || loginType;
+
+    // If your store benefits from knowing the role, you can inject it:
+    login({ ...data.user, role: effectiveRole });
+
+    const isAdmin = effectiveRole === 'admin';
+
+    let redirectTo: string;
+
+    if (isAdmin) {
+      // If ?next=/admin/... and they’re truly admin → honour it
+      if (nextPath && nextPath.startsWith('/admin')) {
+        redirectTo = nextPath;
+      } else {
+        redirectTo = '/admin/registrations'; // or '/admin/dashboard'
+      }
+    } else {
+      // Client: allow ?next= as long as it’s not an admin URL
+      if (nextPath && !nextPath.startsWith('/admin')) {
+        redirectTo = nextPath;
+      } else {
+        redirectTo = '/client-portal/dashboard';
+      }
+    }
+
+    router.replace(redirectTo);
+  } catch (err: any) {
+    console.error('Login error:', err);
+    setError(err.message || 'Login failed');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center py-12 px-4 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
