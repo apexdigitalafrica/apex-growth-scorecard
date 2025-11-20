@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
 
     console.log('🔗 Using redirectTo:', finalRedirectTo)
 
-    // Generate reset token with Supabase - FIXED: removed unused 'data'
-    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(
+    // Generate reset token with Supabase
+    const { data, error } = await supabaseAdmin.auth.resetPasswordForEmail(
       email,
       {
         redirectTo: finalRedirectTo,

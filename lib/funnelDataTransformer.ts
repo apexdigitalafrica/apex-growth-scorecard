@@ -6,7 +6,9 @@ export function transformToFunnelStages(dashboardStats: DashboardStats): FunnelS
     totalSubmissions,
     hotLeads,
     warmLeads,
-    dimensionAverages
+    dimensionAverages,
+    conversionMetrics,
+    recentSubmissions
   } = dashboardStats;
 
   // Use your actual dimension scores for realistic conversion rates
@@ -72,25 +74,25 @@ export function transformToFunnelStages(dashboardStats: DashboardStats): FunnelS
 
 // Advanced transformer using actual submission patterns
 export function createAdvancedFunnel(dashboardStats: DashboardStats): FunnelSnapshot {
-  const { totalSubmissions, hotLeads, recentSubmissions, dimensionAverages } = dashboardStats;
+  const { totalSubmissions, hotLeads, warmLeads, recentSubmissions, dimensionAverages } = dashboardStats;
 
   // Analyze actual submission patterns
-  const readyToBuyCount = recentSubmissions.filter(submission => 
-    submission.lead_readiness === 'Ready to Buy' || submission.lead_priority === 'Hot'
+  const readyToBuyCount = recentSubmissions.filter(s => 
+    s.lead_readiness === 'Ready to Buy' || s.lead_priority === 'Hot'
   ).length;
 
-  const highScoreLeads = recentSubmissions.filter(submission => submission.total_score >= 70).length;
-  const mediumScoreLeads = recentSubmissions.filter(submission => submission.total_score >= 50 && submission.total_score < 70).length;
+  const highScoreLeads = recentSubmissions.filter(s => s.total_score >= 70).length;
+  const mediumScoreLeads = recentSubmissions.filter(s => s.total_score >= 50 && s.total_score < 70).length;
 
   // Use dimension scores for conversion probabilities
-  const leadGenDimension = dimensionAverages.find(dimension => 
-    dimension.dimension_name.includes('Lead') || dimension.dimension_name.includes('lead')
+  const leadGenDimension = dimensionAverages.find(d => 
+    d.dimension_name.includes('Lead') || d.dimension_name.includes('lead')
   );
-  const salesDimension = dimensionAverages.find(dimension => 
-    dimension.dimension_name.includes('Sales') || dimension.dimension_name.includes('sales')
+  const salesDimension = dimensionAverages.find(d => 
+    d.dimension_name.includes('Sales') || d.dimension_name.includes('sales')
   );
-  const marketFitDimension = dimensionAverages.find(dimension => 
-    dimension.dimension_name.includes('Market') || dimension.dimension_name.includes('market')
+  const marketFitDimension = dimensionAverages.find(d => 
+    d.dimension_name.includes('Market') || d.dimension_name.includes('market')
   );
 
   const leadGenRate = leadGenDimension ? leadGenDimension.avg_percentage / 100 : 0.7;
