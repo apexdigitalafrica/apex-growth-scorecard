@@ -306,38 +306,40 @@ export default function Dashboard() {
       </nav>
 
       {/* Quick Access Cards */}
+           {/* Quick Access Cards */}
       <div className="relative z-10 max-w-[1600px] mx-auto p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Admin Registrations Card - Only show for admins */}
-          {user && (user.role === 'admin' || user.permissions?.includes('admin')) && (
-            <div
-              className="group bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500 transition-all hover:scale-105 cursor-pointer"
-              onClick={() => router.push('/admin/registrations')}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="bg-white/10 rounded-full p-3 flex items-center justify-center">
-                  <UserPlus className="w-6 h-6 text-purple-400 group-hover:text-purple-300 transition-colors" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-white text-lg">Review Clients</span>
-                  {pendingCount > 0 && (
-                    <span className="inline-block bg-amber-400 text-amber-900 font-bold px-2 py-0.5 rounded-full text-xs animate-bounce shadow">
-                      {pendingCount}
-                    </span>
-                  )}
-                </div>
+          {/* Admin Registrations Card - Show for everyone temporarily */}
+          <div
+            className="group bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500 transition-all hover:scale-105 cursor-pointer relative"
+            onClick={() => router.push('/admin/registrations')}
+          >
+            {/* Debug indicator */}
+            <div className="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            
+            <div className="flex items-center gap-3 mb-3">
+              <div className="bg-white/10 rounded-full p-3 flex items-center justify-center">
+                <UserPlus className="w-6 h-6 text-purple-400 group-hover:text-purple-300 transition-colors" />
               </div>
-              <p className="text-slate-400 mb-4">
-                {pendingCount > 0 
-                  ? `${pendingCount} pending registration${pendingCount > 1 ? 's' : ''} awaiting approval`
-                  : 'Manage client registrations'
-                }
-              </p>
-              <div className="flex items-center text-purple-400 font-semibold">
-                Manage Registrations <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white text-lg">Review Clients</span>
+                {pendingCount > 0 && (
+                  <span className="inline-block bg-amber-400 text-amber-900 font-bold px-2 py-0.5 rounded-full text-xs animate-bounce shadow">
+                    {pendingCount}
+                  </span>
+                )}
               </div>
             </div>
-          )}
+            <p className="text-slate-400 mb-4">
+              {pendingCount > 0 
+                ? `${pendingCount} pending registration${pendingCount > 1 ? 's' : ''} awaiting approval`
+                : 'Manage client registrations'
+              }
+            </p>
+            <div className="flex items-center text-purple-400 font-semibold">
+              Manage Registrations <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
 
           {/* Growth Scorecard Overview */}
           <Link
