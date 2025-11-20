@@ -1,10 +1,13 @@
-// components/LoginClient.tsx - SIMPLE WORKING VERSION
+// components/LoginClient.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/session-client';
-import { Building2, User, Shield, Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import {
+  Building2, User, Shield, Mail, Lock, ArrowRight,
+  Plus, HelpCircle, Eye, EyeOff, Sparkles, CheckCircle2
+} from 'lucide-react';
 
 export default function LoginClient() {
   const [loginType, setLoginType] = useState<'client' | 'admin'>('client');
@@ -14,6 +17,7 @@ export default function LoginClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [nextPath, setNextPath] = useState<string | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -21,7 +25,9 @@ export default function LoginClient() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    const next = searchParams.get('next');
+    if (next) setNextPath(next);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,18 +43,18 @@ export default function LoginClient() {
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
+      if (!res.ok) throw new Error(data.error || 'Login failed');
 
       login(data.user);
-      
-      // Simple redirect logic
-      if (data.user.role === 'admin') {
-        router.push('/admin/registrations');
-      } else {
-        router.push('/client-portal/dashboard');
-      }
+
+      const isAdmin = data.user.permissions?.includes('admin') || data.user.role === 'admin';
+      const redirectTo = (nextPath && nextPath.startsWith('/admin') && isAdmin)
+        ? nextPath
+        : isAdmin
+          ? '/admin/registrations'
+          : '/client-portal/dashboard';
+
+      router.replace(redirectTo);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -56,121 +62,90 @@ export default function LoginClient() {
     }
   };
 
-  if (!mounted) return null;
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="bg-white p-8 rounded-lg shadow-md">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center py-12 px-4 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Background Orbs */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 -left-4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-0 -right-4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+      </div>
+
+      <div className={`max-w-md w-full space-y-8 relative z-10 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div className="backdrop-blur-xl bg-white/10 rounded-3xl shadow-2xl border border-white/20 p-8">
           <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
-              <Shield className="w-8 h-8 text-white" />
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <Shield className="w-10 h-10 text-white" />
             </div>
-            <h2 className="mt-4 text-2xl font-bold text-gray-900">Apex Growth Portal</h2>
-            <p className="text-gray-600">Sign in to your account</p>
+            <h2 className="text-3xl font-bold text-white">Apex Growth Portal</h2>
+            <p className="text-purple-200 text-sm">Secure authentication portal</p>
           </div>
 
-          <div className="flex space-x-4 mb-6">
-            <button
-              onClick={() => setLoginType('client')}
-              className={`flex-1 py-2 px-4 rounded-md border ${
-                loginType === 'client' 
-                  ? 'bg-blue-50 border-blue-500 text-blue-700' 
-                  : 'border-gray-300 text-gray-700'
-              }`}
-            >
-              <Building2 className="w-5 h-5 mx-auto mb-1" />
-              <span className="text-sm">Client</span>
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <button onClick={() => setLoginType('client')} className={`p-4 rounded-2xl border-2 transition-all ${loginType === 'client' ? 'border-blue-400 bg-blue-500/20' : 'border-white/20'}`}>
+              <Building2 className="w-8 h-8 mx-auto mb-2 text-blue-300" />
+              <div className="font-semibold text-white">Client Portal</div>
             </button>
-            <button
-              onClick={() => setLoginType('admin')}
-              className={`flex-1 py-2 px-4 rounded-md border ${
-                loginType === 'admin' 
-                  ? 'bg-purple-50 border-purple-500 text-purple-700' 
-                  : 'border-gray-300 text-gray-700'
-              }`}
-            >
-              <User className="w-5 h-5 mx-auto mb-1" />
-              <span className="text-sm">Admin</span>
+            <button onClick={() => setLoginType('admin')} className={`p-4 rounded-2xl border-2 transition-all ${loginType === 'admin' ? 'border-purple-400 bg-purple-500/20' : 'border-white/20'}`}>
+              <User className="w-8 h-8 mx-auto mb-2 text-purple-300" />
+              <div className="font-semibold text-white">Admin Portal</div>
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
-                {error}
-              </div>
-            )}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-xl text-sm">{error}</div>}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter your email"
-                />
-                <Mail className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
+            <input
+              type="text"
+              placeholder={loginType === 'admin' ? 'Email or Username' : 'Company Email'}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={loading}
+              className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40"
+            />
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 pr-10"
-                  placeholder="Enter your password"
-                />
-                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
-              </div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                className="w-full px-4 py-3 pr-12 rounded-xl bg-white/10 border border-white/20 text-white"
+              />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                {showPassword ? <EyeOff className="w-5 h-5 text-white/60" /> : <Eye className="w-5 h-5 text-white/60" />}
+              </button>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold hover:opacity-90 transition"
             >
-              {loading ? 'Signing in...' : `Sign in as ${loginType}`}
+              {loading ? 'Signing in...' : `Sign in to ${loginType === 'client' ? 'Client' : 'Admin'} Portal`}
             </button>
           </form>
 
           <div className="mt-6 space-y-3">
-            <button 
-              onClick={() => router.push('/register/client')}
-              className="w-full py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50"
-            >
+            <button onClick={() => router.push('/register/client')} className="w-full py-2.5 rounded-xl border border-blue-400/50 bg-blue-500/10 text-blue-200 hover:bg-blue-500/20">
               Create Client Account
             </button>
-            <button className="w-full py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+            <button className="w-full py-2.5 rounded-xl border border-purple-400/50 bg-purple-500/10 text-purple-200 hover:bg-purple-500/20">
               Request Admin Access
             </button>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes blob { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(30px,-50px) scale(1.1)} 66%{transform:translate(-20px,20px) scale(0.9)} }
+        .animate-blob { animation: blob 7s infinite; }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
+      `}</style>
     </div>
   );
 }
