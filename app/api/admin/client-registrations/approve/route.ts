@@ -9,7 +9,8 @@ function generateRandomPassword(length = 12): string {
     const idx = Math.floor(Math.random() * chars.length);
     result += chars[idx];
   }
-  return result;
+  // Ensure password meets requirements (uppercase, lowercase, number, special char)
+  return 'Aa1!' + result;
 }
 
 export async function POST(req: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1️⃣ Load the registration request (use supabaseAdmin)
+    // 1️⃣ Load the registration request
     const { data: registration, error: regError } = await supabaseAdmin
       .from('client_registration_requests')
       .select('*')
@@ -33,11 +34,12 @@ export async function POST(req: NextRequest) {
     if (regError || !registration) {
       console.error('❌ Registration lookup error:', regError);
       return NextResponse.json(
-        { error: 'Registration not found' },
+        { error: 'Registration not found', details: regError?.message },
         { status: 404 }
       );
     }
 
+    // Check if already approved
     if (registration.status === 'approved') {
       return NextResponse.json(
         { success: true, message: 'Already approved', request: registration },
@@ -58,88 +60,167 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2️⃣ If client_id is missing, create a client record now (use supabaseAdmin)
+    // 2️⃣ Check if client already exists OR create new one
     if (!clientId) {
-      const { data: client, error: clientError } = await supabaseAdmin
+      // First check if client with this email already exists
+      const { data: existingClient } = await supabaseAdmin
         .from('clients')
-        .insert({
-          company_name: companyName || 'Unnamed Company',
-          contact_email: contactEmail,
-          is_active: true,
-        })
         .select('id, company_name')
-        .single();
+        .eq('contact_email', contactEmail)
+        .maybeSingle();
 
-      if (clientError || !client) {
-        console.error('❌ Create client error:', clientError);
-        return NextResponse.json(
-          { error: 'Failed to create client record' },
-          { status: 500 }
-        );
-      }
+      if (existingClient) {
+        clientId = existingClient.id;
+        console.log('✅ Found existing client:', clientId);
+        
+        // Update registration with found client_id
+        await supabaseAdmin
+          .from('client_registration_requests')
+          .update({ client_id: clientId })
+          .eq('id', registrationId);
+      } else {
+        // Create new client
+        const { data: client, error: clientError } = await supabaseAdmin
+          .from('clients')
+          .insert({
+            company_name: companyName || 'Unnamed Company',
+            contact_email: contactEmail,
+            is_active: true,
+          })
+          .select('id, company_name')
+          .single();
 
-      clientId = client.id;
+        if (clientError || !client) {
+          console.error('❌ Create client error:', clientError);
+          return NextResponse.json(
+            { error: 'Failed to create client record', details: clientError?.message },
+            { status: 500 }
+          );
+        }
 
-      // Update registration with client_id (use supabaseAdmin)
-      const { error: updateClientIdError } = await supabaseAdmin
-        .from('client_registration_requests')
-        .update({ client_id: clientId })
-        .eq('id', registrationId);
+        clientId = client.id;
+        console.log('✅ Created new client:', clientId);
 
-      if (updateClientIdError) {
-        console.error('❌ Failed to update registration with client_id:', updateClientIdError);
+        // Update registration with client_id
+        await supabaseAdmin
+          .from('client_registration_requests')
+          .update({ client_id: clientId })
+          .eq('id', registrationId);
       }
     }
 
-    // 3️⃣ Create Supabase Auth user
-    const password = generateRandomPassword(12);
+    // 3️⃣ Check if auth user already exists by email
+    const { data: existingAuthUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingAuthUser = existingAuthUsers?.users?.find(u => u.email === contactEmail);
 
-    const { data: authResult, error: authError } =
-      await supabaseAdmin.auth.admin.createUser({
-        email: contactEmail,
-        password,
-        email_confirm: true,
+    let authUserId: string;
+    let password = generateRandomPassword(12);
+    let isNewUser = false;
+
+    if (existingAuthUser) {
+      authUserId = existingAuthUser.id;
+      console.log('✅ Found existing auth user:', authUserId);
+      
+      // Update user metadata
+      await supabaseAdmin.auth.admin.updateUserById(authUserId, {
         user_metadata: {
           role: 'client',
           client_id: clientId,
           company_name: companyName,
         },
       });
+    } else {
+      // Create new auth user
+      const { data: authResult, error: authError } =
+        await supabaseAdmin.auth.admin.createUser({
+          email: contactEmail,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            role: 'client',
+            client_id: clientId,
+            company_name: companyName,
+          },
+        });
 
-    if (authError || !authResult?.user) {
-      console.error('❌ Create auth user error:', authError);
-      return NextResponse.json(
-        { error: `Failed to create auth user: ${authError?.message || 'Unknown error'}` },
-        { status: 500 }
-      );
+      if (authError || !authResult?.user) {
+        console.error('❌ Create auth user error:', authError);
+        return NextResponse.json(
+          { 
+            error: `Failed to create auth user: ${authError?.message || 'Unknown error'}`,
+            details: authError 
+          },
+          { status: 500 }
+        );
+      }
+
+      authUserId = authResult.user.id;
+      isNewUser = true;
+      console.log('✅ Created new auth user:', authUserId);
     }
 
-    const authUserId = authResult.user.id;
-
-    // 4️⃣ Upsert row into client_users (use supabaseAdmin)
-    const { error: clientUserError } = await supabaseAdmin
+    // 4️⃣ Check if client_user already exists
+    const { data: existingClientUser } = await supabaseAdmin
       .from('client_users')
-      .upsert(
-        {
-          auth_user_id: authUserId,
+      .select('*')
+      .eq('auth_user_id', authUserId)
+      .maybeSingle();
+
+    if (existingClientUser) {
+      console.log('✅ Client user already exists, updating...');
+      // Update existing record
+      const { error: updateError } = await supabaseAdmin
+        .from('client_users')
+        .update({
           client_id: clientId,
           email: contactEmail,
           full_name: fullName || contactEmail,
           role: 'owner',
-          last_login: null,
-        },
-        { onConflict: 'auth_user_id' }
-      );
+        })
+        .eq('auth_user_id', authUserId);
 
-    if (clientUserError) {
-      console.error('❌ client_users upsert error:', clientUserError);
-      return NextResponse.json(
-        { error: 'Failed to create client user record' },
-        { status: 500 }
-      );
+      if (updateError) {
+        console.error('❌ client_users update error:', updateError);
+        return NextResponse.json(
+          { 
+            error: 'Failed to update client user record',
+            details: updateError.message,
+            hint: updateError.hint 
+          },
+          { status: 500 }
+        );
+      }
+    } else {
+      // Insert new client_user record
+      // Note: password_hash is NOT NULL in your schema but we use Supabase Auth
+      // We'll set it to a placeholder since auth is handled by Supabase
+      const { error: insertError } = await supabaseAdmin
+        .from('client_users')
+        .insert({
+          auth_user_id: authUserId,
+          client_id: clientId,
+          email: contactEmail,
+          full_name: fullName || contactEmail,
+          password_hash: 'supabase_auth', // Placeholder - actual auth via Supabase
+          role: 'owner',
+        });
+
+      if (insertError) {
+        console.error('❌ client_users insert error:', insertError);
+        return NextResponse.json(
+          { 
+            error: 'Failed to create client user record',
+            details: insertError.message,
+            hint: insertError.hint,
+            code: insertError.code
+          },
+          { status: 500 }
+        );
+      }
+      console.log('✅ Created client_user record');
     }
 
-    // 5️⃣ Mark registration as approved (use supabaseAdmin)
+    // 5️⃣ Mark registration as approved
     const { data: updatedRegistration, error: updateRegError } = await supabaseAdmin
       .from('client_registration_requests')
       .update({
@@ -152,7 +233,7 @@ export async function POST(req: NextRequest) {
     if (updateRegError || !updatedRegistration) {
       console.error('❌ registration update error:', updateRegError);
       return NextResponse.json(
-        { error: 'Failed to update registration status' },
+        { error: 'Failed to update registration status', details: updateRegError?.message },
         { status: 500 }
       );
     }
@@ -161,6 +242,7 @@ export async function POST(req: NextRequest) {
       clientId,
       authUserId,
       email: contactEmail,
+      isNewUser,
     });
 
     return NextResponse.json(
@@ -168,14 +250,19 @@ export async function POST(req: NextRequest) {
         success: true,
         message: 'Client approved and auth user created',
         request: updatedRegistration,
-        tempPassword: password,
+        tempPassword: isNewUser ? password : '(using existing account)',
+        isNewUser,
       },
       { status: 200 }
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error('❌ Approve registration error:', err);
     return NextResponse.json(
-      { error: 'Unexpected error approving registration' },
+      { 
+        error: 'Unexpected error approving registration',
+        details: err?.message || String(err),
+        stack: process.env.NODE_ENV === 'development' ? err?.stack : undefined
+      },
       { status: 500 }
     );
   }
