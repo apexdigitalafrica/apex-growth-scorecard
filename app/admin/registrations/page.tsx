@@ -38,7 +38,6 @@ export default function AdminRegistrationsPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Helper: Check if current user has admin access
   const hasAdminAccess = () => {
     if (!user) return false;
     return (
@@ -47,12 +46,9 @@ export default function AdminRegistrationsPage() {
     );
   };
 
-  // Initial load + auth guard
   useEffect(() => {
     const init = async () => {
-      // Optional: small delay if auth store is async (better: use isLoaded flag if available)
-      // Remove if your useAuthStore provides a reliable ready state
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 300)); // tiny delay for auth
 
       if (!user) {
         router.replace('/login?next=/admin/registrations');
@@ -66,11 +62,16 @@ export default function AdminRegistrationsPage() {
       }
 
       try {
-        const res = await fetch('/api/admin/registrations');
+        const res = await fetch('/api/admin/registrations', {
+          headers: {
+            'x-admin-id': user.id,   // ← THIS IS REQUIRED NOW
+          },
+        });
+
         const data = await res.json();
 
         if (!res.ok) {
-          throw new Error(data.error || 'Failed to load registration requests');
+          throw new Error(data.error || 'Failed to load requests');
         }
 
         setRequests(data.requests || []);
@@ -84,7 +85,6 @@ export default function AdminRegistrationsPage() {
     init();
   }, [user, router]);
 
-  // Handle approve/reject actions
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     if (!user) return;
 
@@ -94,8 +94,10 @@ export default function AdminRegistrationsPage() {
     try {
       const res = await fetch('/api/admin/registrations', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-		'x-admin-id': user.id,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-id': user.id,   // ← THIS IS REQUIRED NOW
+        },
         body: JSON.stringify({
           id,
           action,
@@ -109,9 +111,8 @@ export default function AdminRegistrationsPage() {
         throw new Error(data.error || `Failed to ${action} request`);
       }
 
-      // Update the specific request in state
       setRequests(prev =>
-        prev.map(r => (r.id === id ? (data.request as RegistrationRequest) : r))
+        prev.map(r => (r.id === id ? data.request : r))
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update request');
@@ -120,7 +121,6 @@ export default function AdminRegistrationsPage() {
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
@@ -129,7 +129,6 @@ export default function AdminRegistrationsPage() {
     );
   }
 
-  // Error / unauthorized state
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
@@ -150,7 +149,6 @@ export default function AdminRegistrationsPage() {
     );
   }
 
-  // Main UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-4 py-10">
       <div className="max-w-5xl mx-auto space-y-8">
