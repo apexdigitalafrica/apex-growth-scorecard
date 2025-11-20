@@ -12,6 +12,12 @@ import {
   CheckCircle2,
   XCircle,
   ShieldAlert,
+  Users,
+  Sparkles,
+  AlertCircle,
+  ArrowLeft,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 type RegistrationStatus = 'pending' | 'approved' | 'rejected';
@@ -29,7 +35,7 @@ interface RegistrationRequest {
   reviewed_by: string | null;
 }
 
-// 🔹 Approve button component – calls /api/admin/client-registrations/approve
+// 🔹 Approve button component
 function ApproveClientButton({
   registrationId,
   onApproved,
@@ -40,6 +46,7 @@ function ApproveClientButton({
   const [loading, setLoading] = useState(false);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleApprove = async () => {
     setLoading(true);
@@ -73,23 +80,60 @@ function ApproveClientButton({
     }
   };
 
+  const copyPassword = () => {
+    if (tempPassword) {
+      navigator.clipboard.writeText(tempPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-2 items-end">
+    <div className="flex flex-col gap-3 items-end">
       <button
         onClick={handleApprove}
         disabled={loading}
-        className="px-4 py-2 text-sm font-medium rounded-lg border border-emerald-500/70 text-emerald-50 bg-emerald-500/10 hover:bg-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition"
+        className="px-5 py-2.5 text-sm font-bold rounded-xl border-2 border-transparent text-white bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/50 hover:shadow-emerald-500/70 hover:scale-105 disabled:hover:scale-100"
       >
-        {loading ? 'Approving…' : 'Approve & Create Portal User'}
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            Approving...
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            Approve & Create User
+          </span>
+        )}
       </button>
 
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && (
+        <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-3 py-2 rounded-lg text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          {error}
+        </div>
+      )}
 
       {tempPassword && (
-        <p className="text-xs text-amber-300">
-          Temp password:{' '}
-          <span className="font-mono">{tempPassword}</span>
-        </p>
+        <div className="bg-amber-500/20 border border-amber-400/50 text-amber-200 px-4 py-3 rounded-xl text-xs space-y-2">
+          <p className="font-medium">Temporary password created:</p>
+          <div className="flex items-center gap-2 bg-slate-900/50 px-3 py-2 rounded-lg">
+            <code className="font-mono text-amber-100 flex-1">{tempPassword}</code>
+            <button
+              onClick={copyPassword}
+              className="p-1.5 hover:bg-amber-500/20 rounded transition"
+              title="Copy password"
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-green-400" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+          <p className="text-amber-300/80">Send this to the client securely</p>
+        </div>
       )}
     </div>
   );
@@ -103,6 +147,11 @@ export default function AdminRegistrationsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const hasAdminAccess = () => {
     if (!user) return false;
@@ -153,7 +202,6 @@ export default function AdminRegistrationsPage() {
     init();
   }, [user, router]);
 
-  // Keep PATCH /api/admin/registrations for REJECT only
   const handleAction = async (id: string, action: 'reject') => {
     if (!user) return;
 
@@ -194,28 +242,43 @@ export default function AdminRegistrationsPage() {
     }
   };
 
+  const getStatusCounts = () => {
+    return {
+      pending: requests.filter(r => (r.status || 'pending') === 'pending').length,
+      approved: requests.filter(r => r.status === 'approved').length,
+      rejected: requests.filter(r => r.status === 'rejected').length,
+    };
+  };
+
+  const counts = getStatusCounts();
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="text-slate-300">Loading registration requests…</div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-200 text-sm">Loading registrations...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
-        <div className="max-w-md w-full bg-red-500/10 border border-red-500/40 text-red-100 rounded-2xl p-6 flex gap-3">
-          <ShieldAlert className="w-6 h-6 mt-1 flex-shrink-0" />
-          <div>
-            <h2 className="font-semibold mb-1">Authorization issue</h2>
-            <p className="text-sm mb-3">{error}</p>
-            <button
-              onClick={() => router.push('/login')}
-              className="text-xs font-medium underline hover:text-red-50"
-            >
-              Go to login
-            </button>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 px-4">
+        <div className="max-w-md w-full backdrop-blur-xl bg-red-500/10 border border-red-500/40 text-red-100 rounded-2xl p-8 animate-shake">
+          <div className="flex gap-4">
+            <ShieldAlert className="w-8 h-8 mt-1 flex-shrink-0" />
+            <div>
+              <h2 className="font-bold text-xl mb-2">Authorization Required</h2>
+              <p className="text-sm mb-4">{error}</p>
+              <button
+                onClick={() => router.push('/login')}
+                className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-400/50 rounded-xl text-sm font-medium transition-all"
+              >
+                Go to Login
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -223,152 +286,217 @@ export default function AdminRegistrationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-4 py-10">
-      <div className="max-w-5xl mx-auto space-y-8">
-        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-  <div>
-    <h1 className="text-2xl sm:text-3xl font-bold text-slate-50 flex items-center gap-3">
-      Client Registration Requests
-    </h1>
-    <p className="text-sm text-slate-400 mt-2">
-      Review and manage organizations requesting access to the Apex Growth Portal.
-    </p>
-  </div>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bTAtNHYyaDJ2LTJoLTJ6bS0yIDB2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0wIDR2Mmgydi0yaC0yem0tMiAwdjJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnptMCA0djJoMnYtMmgtMnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
+        
+        {/* Animated Orbs */}
+        <div className="absolute top-0 -left-4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-0 -right-4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+      </div>
 
-  <button
-    onClick={() => router.push('/dashboard')}
-    className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-600 text-slate-100 bg-slate-900/60 hover:bg-slate-800/80 hover:border-slate-400 transition"
-  >
-    ← Back to Dashboard
-  </button>
-</header>
+      {/* Content */}
+      <div className={`relative z-10 px-4 py-10 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        <div className="max-w-6xl mx-auto space-y-8">
+          {/* Header */}
+          <header className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 p-8 shadow-2xl">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/50">
+                  <Users className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent flex items-center gap-2">
+                    Registration Requests
+                    <Sparkles className="w-6 h-6 text-purple-300" />
+                  </h1>
+                  <p className="text-sm text-purple-200 mt-1">
+                    Review and manage client access requests
+                  </p>
+                </div>
+              </div>
 
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="flex items-center gap-2 px-5 py-3 backdrop-blur-xl bg-white/5 border-2 border-white/20 text-white rounded-xl hover:bg-white/10 transition-all hover:scale-105 font-medium"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Dashboard
+              </button>
+            </div>
 
-        {requests.length === 0 ? (
-          <div className="bg-slate-900/70 border border-slate-700/70 rounded-2xl p-12 text-center">
-            <p className="text-slate-400">No pending registration requests.</p>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {requests.map(req => {
-              const status = (req.status || 'pending') as RegistrationStatus;
-              const isPending = status === 'pending';
-
-              return (
+            {/* Stats Cards */}
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { label: 'Pending', count: counts.pending, color: 'amber', icon: Clock },
+                { label: 'Approved', count: counts.approved, color: 'emerald', icon: CheckCircle2 },
+                { label: 'Rejected', count: counts.rejected, color: 'rose', icon: XCircle },
+              ].map(stat => (
                 <div
-                  key={req.id}
-                  className="bg-slate-900/70 border border-slate-700/70 rounded-2xl p-6 backdrop-blur-sm"
+                  key={stat.label}
+                  className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/10 transition-all duration-300 group"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-400/40 flex items-center justify-center flex-shrink-0">
-                        <Building2 className="w-6 h-6 text-emerald-300" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-50 text-lg">
-                          {req.company_name}
-                        </h3>
-                        <p className="text-sm text-slate-400">
-                          Requested by {req.full_name}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          {req.requested_at
-                            ? new Date(req.requested_at).toLocaleString()
-                            : 'Date unknown'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm">
-                      {status === 'approved' && (
-                        <>
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                          <span className="text-emerald-300 font-medium">
-                            Approved
-                          </span>
-                        </>
-                      )}
-                      {status === 'rejected' && (
-                        <>
-                          <XCircle className="w-5 h-5 text-rose-400" />
-                          <span className="text-rose-300 font-medium">
-                            Rejected
-                          </span>
-                        </>
-                      )}
-                      {isPending && (
-                        <>
-                          <Clock className="w-5 h-5 text-amber-400" />
-                          <span className="text-amber-300 font-medium">
-                            Pending
-                          </span>
-                        </>
-                      )}
-                    </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <stat.icon className={`w-5 h-5 text-${stat.color}-400`} />
+                    <span className={`text-2xl font-bold text-${stat.color}-300`}>{stat.count}</span>
                   </div>
+                  <p className="text-xs text-white/60">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </header>
 
-                  <div className="mt-5 grid md:grid-cols-2 gap-5 text-sm">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-slate-400" />
-                        <a
-                          href={`mailto:${req.contact_email}`}
-                          className="text-slate-200 hover:underline"
-                        >
-                          {req.contact_email}
-                        </a>
+          {/* Requests List */}
+          {requests.length === 0 ? (
+            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-12 text-center">
+              <AlertCircle className="w-16 h-16 text-white/40 mx-auto mb-4" />
+              <p className="text-white/70 text-lg">No registration requests found</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {requests.map((req, index) => {
+                const status = (req.status || 'pending') as RegistrationStatus;
+                const isPending = status === 'pending';
+
+                return (
+                  <div
+                    key={req.id}
+                    className={`backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 shadow-xl hover:shadow-2xl hover:bg-white/15 transition-all duration-500 group animate-slide-in`}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border-2 border-purple-400/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Building2 className="w-7 h-7 text-purple-300" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-lg text-white">
+                            {req.company_name}
+                          </div>
+                          <div className="text-sm text-purple-200">
+                            by {req.full_name}
+                          </div>
+                        </div>
                       </div>
-                      {req.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-slate-400" />
+
+                      <div className="flex items-center gap-2 text-xs text-white/60 backdrop-blur-xl bg-white/5 px-3 py-2 rounded-xl border border-white/10">
+                        <Clock className="w-4 h-4" />
+                        {req.requested_at
+                          ? new Date(req.requested_at).toLocaleString()
+                          : '—'}
+                      </div>
+                    </div>
+
+                    {/* Contact Info */}
+                    <div className="grid md:grid-cols-2 gap-4 mb-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 text-sm text-white/80 backdrop-blur-xl bg-white/5 px-4 py-3 rounded-xl border border-white/10 hover:bg-white/10 transition-all">
+                          <Mail className="w-4 h-4 text-purple-300 flex-shrink-0" />
                           <a
-                            href={`tel:${req.phone}`}
-                            className="text-slate-200 hover:underline"
+                            href={`mailto:${req.contact_email}`}
+                            className="hover:text-purple-200 transition-colors truncate"
                           >
-                            {req.phone}
+                            {req.contact_email}
                           </a>
+                        </div>
+                        {req.phone && (
+                          <div className="flex items-center gap-3 text-sm text-white/80 backdrop-blur-xl bg-white/5 px-4 py-3 rounded-xl border border-white/10 hover:bg-white/10 transition-all">
+                            <Phone className="w-4 h-4 text-blue-300 flex-shrink-0" />
+                            <a
+                              href={`tel:${req.phone}`}
+                              className="hover:text-blue-200 transition-colors"
+                            >
+                              {req.phone}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {req.message && (
+                        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-4">
+                          <p className="text-sm text-white/70 italic">
+                            "{req.message}"
+                          </p>
                         </div>
                       )}
                     </div>
 
-                    {req.message && (
-                      <div className="text-slate-300 text-sm bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-                        <p className="italic">"{req.message}"</p>
+                    {/* Status and Actions */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t border-white/10">
+                      <div className="flex items-center gap-2">
+                        {status === 'approved' && (
+                          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 border border-emerald-400/40 rounded-xl">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                            <span className="text-sm font-medium text-emerald-300">Approved</span>
+                          </div>
+                        )}
+                        {status === 'rejected' && (
+                          <div className="flex items-center gap-2 px-4 py-2 bg-rose-500/20 border border-rose-400/40 rounded-xl">
+                            <XCircle className="w-4 h-4 text-rose-400" />
+                            <span className="text-sm font-medium text-rose-300">Rejected</span>
+                          </div>
+                        )}
+                        {isPending && (
+                          <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/20 border border-amber-400/40 rounded-xl animate-pulse">
+                            <Clock className="w-4 h-4 text-amber-300" />
+                            <span className="text-sm font-medium text-amber-200">Pending Review</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {isPending && (
-                    <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-end">
-                      <button
-                        onClick={() => handleAction(req.id, 'reject')}
-                        disabled={actionLoadingId === req.id}
-                        className="px-4 py-2 text-sm font-medium rounded-lg border border-rose-500/60 text-rose-100 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                      >
-                        {actionLoadingId === req.id
-                          ? 'Processing…'
-                          : 'Reject'}
-                      </button>
-
-                      <ApproveClientButton
-                        registrationId={req.id}
-                        onApproved={updated =>
-                          setRequests(prev =>
-                            prev.map(r =>
-                              r.id === updated.id ? updated : r
-                            )
-                          )
-                        }
-                      />
+                      {isPending && (
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => handleAction(req.id, 'reject')}
+                            disabled={actionLoadingId === req.id}
+                            className="px-5 py-2.5 text-sm font-semibold rounded-xl border-2 border-rose-500/60 text-rose-100 bg-rose-500/10 hover:bg-rose-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-105 disabled:hover:scale-100"
+                          >
+                            {actionLoadingId === req.id ? 'Processing...' : 'Reject'}
+                          </button>
+                          
+                          <ApproveClientButton
+                            registrationId={req.id}
+                            onApproved={updated =>
+                              setRequests(prev =>
+                                prev.map(r => (r.id === updated.id ? updated : r))
+                              )
+                            }
+                          />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
+
+      <style jsx>{`
+        @keyframes blob {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        @keyframes slide-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+          20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .animate-blob { animation: blob 7s infinite; }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
+        .animate-slide-in { animation: slide-in 0.5s ease-out forwards; }
+        .animate-shake { animation: shake 0.5s; }
+      `}</style>
     </div>
   );
 }
