@@ -1,7 +1,7 @@
 // app/admin/registrations/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/session-client';
 import {
@@ -29,6 +29,72 @@ interface RegistrationRequest {
   reviewed_by: string | null;
 }
 
+// 🔹 Approve button component – calls /api/admin/client-registrations/approve
+function ApproveClientButton({
+  registrationId,
+  onApproved,
+}: {
+  registrationId: string;
+  onApproved: (updated: RegistrationRequest) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleApprove = async () => {
+    setLoading(true);
+    setError(null);
+    setTempPassword(null);
+
+    try {
+      const res = await fetch('/api/admin/client-registrations/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to approve registration');
+      }
+
+      if (data.request) {
+        onApproved(data.request as RegistrationRequest);
+      }
+
+      if (data.tempPassword) {
+        setTempPassword(data.tempPassword as string);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Approve failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 items-end">
+      <button
+        onClick={handleApprove}
+        disabled={loading}
+        className="px-4 py-2 text-sm font-medium rounded-lg border border-emerald-500/70 text-emerald-50 bg-emerald-500/10 hover:bg-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition"
+      >
+        {loading ? 'Approving…' : 'Approve & Create Portal User'}
+      </button>
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+
+      {tempPassword && (
+        <p className="text-xs text-amber-300">
+          Temp password:{' '}
+          <span className="font-mono">{tempPassword}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function AdminRegistrationsPage() {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -41,50 +107,54 @@ export default function AdminRegistrationsPage() {
   const hasAdminAccess = () => {
     if (!user) return false;
     return (
-      user.role === 'admin' ||
-      (Array.isArray(user.permissions) && user.permissions.includes('admin'))
+      (user as any).role === 'admin' ||
+      (Array.isArray((user as any).permissions) &&
+        (user as any).permissions.includes('admin'))
     );
   };
 
   useEffect(() => {
-  const init = async () => {
-    if (!user) {
-      router.replace('/login?next=/admin/registrations');
-      return;
-    }
-
-    if (!hasAdminAccess()) {
-      setError('You do not have permission to view this page.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/admin/registrations', {
-        method: 'GET',
-        headers: {
-          'x-admin-id': user.id,   
-        },
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Unauthorized');
+    const init = async () => {
+      if (!user) {
+        router.replace('/login?next=/admin/registrations');
+        return;
       }
 
-      const data = await res.json();
-      setRequests(data.requests || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (!hasAdminAccess()) {
+        setError('You do not have permission to view this page.');
+        setLoading(false);
+        return;
+      }
 
-  init();
-}, [user, router]);
+      try {
+        const res = await fetch('/api/admin/registrations', {
+          method: 'GET',
+          headers: {
+            'x-admin-id': (user as any).id,
+          },
+        });
 
-  const handleAction = async (id: string, action: 'approve' | 'reject') => {
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Unauthorized');
+        }
+
+        const data = await res.json();
+        setRequests((data.requests || []) as RegistrationRequest[]);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to load requests'
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
+  }, [user, router]);
+
+  // Keep PATCH /api/admin/registrations for REJECT only
+  const handleAction = async (id: string, action: 'reject') => {
     if (!user) return;
 
     setActionLoadingId(id);
@@ -95,12 +165,12 @@ export default function AdminRegistrationsPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-id': user.id,   // ← THIS IS REQUIRED NOW
+          'x-admin-id': (user as any).id,
         },
         body: JSON.stringify({
           id,
           action,
-          adminId: user.id,
+          adminId: (user as any).id,
         }),
       });
 
@@ -110,11 +180,15 @@ export default function AdminRegistrationsPage() {
         throw new Error(data.error || `Failed to ${action} request`);
       }
 
-      setRequests(prev =>
-        prev.map(r => (r.id === id ? data.request : r))
-      );
+      if (data.request) {
+        setRequests(prev =>
+          prev.map(r => (r.id === id ? (data.request as RegistrationRequest) : r))
+        );
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update request');
+      setError(
+        err instanceof Error ? err.message : 'Failed to update request'
+      );
     } finally {
       setActionLoadingId(null);
     }
@@ -151,14 +225,24 @@ export default function AdminRegistrationsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-4 py-10">
       <div className="max-w-5xl mx-auto space-y-8">
-        <header>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-50 flex items-center gap-3">
-            Client Registration Requests
-          </h1>
-          <p className="text-sm text-slate-400 mt-2">
-            Review and manage organizations requesting access to the Apex Growth Portal.
-          </p>
-        </header>
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div>
+    <h1 className="text-2xl sm:text-3xl font-bold text-slate-50 flex items-center gap-3">
+      Client Registration Requests
+    </h1>
+    <p className="text-sm text-slate-400 mt-2">
+      Review and manage organizations requesting access to the Apex Growth Portal.
+    </p>
+  </div>
+
+  <button
+    onClick={() => router.push('/dashboard')}
+    className="inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-600 text-slate-100 bg-slate-900/60 hover:bg-slate-800/80 hover:border-slate-400 transition"
+  >
+    ← Back to Dashboard
+  </button>
+</header>
+
 
         {requests.length === 0 ? (
           <div className="bg-slate-900/70 border border-slate-700/70 rounded-2xl p-12 text-center">
@@ -200,19 +284,25 @@ export default function AdminRegistrationsPage() {
                       {status === 'approved' && (
                         <>
                           <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                          <span className="text-emerald-300 font-medium">Approved</span>
+                          <span className="text-emerald-300 font-medium">
+                            Approved
+                          </span>
                         </>
                       )}
                       {status === 'rejected' && (
                         <>
                           <XCircle className="w-5 h-5 text-rose-400" />
-                          <span className="text-rose-300 font-medium">Rejected</span>
+                          <span className="text-rose-300 font-medium">
+                            Rejected
+                          </span>
                         </>
                       )}
                       {isPending && (
                         <>
                           <Clock className="w-5 h-5 text-amber-400" />
-                          <span className="text-amber-300 font-medium">Pending</span>
+                          <span className="text-amber-300 font-medium">
+                            Pending
+                          </span>
                         </>
                       )}
                     </div>
@@ -222,14 +312,20 @@ export default function AdminRegistrationsPage() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 text-slate-400" />
-                        <a href={`mailto:${req.contact_email}`} className="text-slate-200 hover:underline">
+                        <a
+                          href={`mailto:${req.contact_email}`}
+                          className="text-slate-200 hover:underline"
+                        >
                           {req.contact_email}
                         </a>
                       </div>
                       {req.phone && (
                         <div className="flex items-center gap-2">
                           <Phone className="w-4 h-4 text-slate-400" />
-                          <a href={`tel:${req.phone}`} className="text-slate-200 hover:underline">
+                          <a
+                            href={`tel:${req.phone}`}
+                            className="text-slate-200 hover:underline"
+                          >
                             {req.phone}
                           </a>
                         </div>
@@ -244,21 +340,27 @@ export default function AdminRegistrationsPage() {
                   </div>
 
                   {isPending && (
-                    <div className="mt-5 flex justify-end gap-3">
+                    <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-end">
                       <button
                         onClick={() => handleAction(req.id, 'reject')}
                         disabled={actionLoadingId === req.id}
                         className="px-4 py-2 text-sm font-medium rounded-lg border border-rose-500/60 text-rose-100 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition"
                       >
-                        {actionLoadingId === req.id ? 'Processing…' : 'Reject'}
+                        {actionLoadingId === req.id
+                          ? 'Processing…'
+                          : 'Reject'}
                       </button>
-                      <button
-                        onClick={() => handleAction(req.id, 'approve')}
-                        disabled={actionLoadingId === req.id}
-                        className="px-4 py-2 text-sm font-medium rounded-lg border border-emerald-500/70 text-emerald-50 bg-emerald-500/10 hover:bg-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                      >
-                        {actionLoadingId === req.id ? 'Processing…' : 'Approve'}
-                      </button>
+
+                      <ApproveClientButton
+                        registrationId={req.id}
+                        onApproved={updated =>
+                          setRequests(prev =>
+                            prev.map(r =>
+                              r.id === updated.id ? updated : r
+                            )
+                          )
+                        }
+                      />
                     </div>
                   )}
                 </div>
