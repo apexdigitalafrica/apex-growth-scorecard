@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+// ONLY REPLACE THE GET FUNCTION — KEEP PATCH AS IS
 export async function GET() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -20,13 +21,15 @@ export async function GET() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  // THIS LINE IS KEY — remove any status filter so you see ALL requests
   const { data: requests, error } = await supabase
     .from('client_registration_requests')
     .select('*')
     .order('requested_at', { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 });
+    console.error('Supabase error:', error);
+    return NextResponse.json({ error: 'Failed to fetch' }, { status: 500 });
   }
 
   return NextResponse.json({ requests: requests || [] });
