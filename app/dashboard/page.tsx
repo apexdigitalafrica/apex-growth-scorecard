@@ -79,7 +79,7 @@ type TimeRange = '7d' | '30d' | '90d' | 'all';
 type LeadFilter = 'all' | 'hot' | 'warm' | 'cold';
 
 export default function Dashboard() {
-  const { logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const router = useRouter();
 
   const handleLogout = () => {
@@ -265,6 +265,16 @@ export default function Dashboard() {
             </div>
             
             <div className="flex items-center gap-4">
+				  {/* 🔐 Admin-only link */}
+  {user && (user.role === 'admin' || user.permissions?.includes('admin')) && (
+    <Link
+      href="/admin/registrations"
+      className="text-emerald-300 hover:text-emerald-100 transition-colors flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-400/40 hover:bg-emerald-500/20"
+    >
+      <Shield className="w-4 h-4" />
+      Admin Registrations
+    </Link>
+  )}
               {/* Logout Button */}
               <button
                 onClick={handleLogout}
