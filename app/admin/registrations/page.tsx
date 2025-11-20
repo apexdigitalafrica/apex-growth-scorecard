@@ -38,6 +38,9 @@ export default function AdminRegistrationsPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+// TEMPORARY - remove after testing
+const isAdmin = true; // Force admin access
+
   // Load requests + basic admin guard
  useEffect(() => {
   const init = async () => {
@@ -83,6 +86,10 @@ export default function AdminRegistrationsPage() {
   init();
 }, [user, router]);
 
+// Add to dashboard component
+useEffect(() => {
+  console.log('🔍 DASHBOARD USER DEBUG:', user);
+}, [user]);
 
   const handleAction = async (
     id: string,
@@ -123,6 +130,16 @@ export default function AdminRegistrationsPage() {
       setActionLoadingId(null);
     }
   };
+// Add this debug code - remove after fixing
+useEffect(() => {
+  console.log('🔍 ADMIN PAGE DEBUG:');
+  console.log('User object:', user);
+  console.log('User role:', user?.role);
+  console.log('User permissions:', user?.permissions);
+  console.log('User isAdmin:', user?.isAdmin);
+  console.log('Full user object:', JSON.stringify(user, null, 2));
+}, [user]);
+
 
   /* ---------- RENDER ---------- */
 
