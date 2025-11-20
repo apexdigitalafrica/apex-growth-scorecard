@@ -38,63 +38,54 @@ export default function AdminRegistrationsPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-// TEMPORARY - remove after testing
-const isAdmin = true; // Force admin access
-
-  // Load requests + basic admin guard
- useEffect(() => {
-  const init = async () => {
-    // Give auth store time to initialize
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (!user) {
-      router.replace('/login?next=/admin/registrations');
-      return;
-    }
-
-    // More flexible admin check
-    const isAdmin = user?.role === 'admin' || 
-                   user?.permissions?.includes('admin') ||
-                   user?.isAdmin === true;
-
-    console.log('Admin access check:', { 
-      hasUser: !!user, 
-      userRole: user?.role, 
-      userPermissions: user?.permissions,
-      isAdmin 
-    });
-
-    if (!isAdmin) {
-      setError('You do not have permission to view this page.');
-      setLoading(false);
-      return;
-    }
-
-    // Load requests if user is admin
-    try {
-      const res = await fetch('/api/admin/registrations');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to load requests');
-      setRequests(data.requests || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load requests');
-    } finally {
-      setLoading(false);
-    }
+  // Helper: Check if current user has admin access
+  const hasAdminAccess = () => {
+    if (!user) return false;
+    return (
+      user.role === 'admin' ||
+      (Array.isArray(user.permissions) && user.permissions.includes('admin'))
+    );
   };
 
-  init();
-}, [user, router]);
+  // Initial load + auth guard
+  useEffect(() => {
+    const init = async () => {
+      // Optional: small delay if auth store is async (better: use isLoaded flag if available)
+      // Remove if your useAuthStore provides a reliable ready state
+      await new Promise(r => setTimeout(r, 300));
 
-// Add to dashboard component
-useEffect(() => {
-  console.log('🔍 DASHBOARD USER DEBUG:', user);
-}, [user]);
+      if (!user) {
+        router.replace('/login?next=/admin/registrations');
+        return;
+      }
 
-  const handleAction = async (
-    id: string,
-    action: 'approve' | 'reject',
-  ): Promise<void> => {
+      if (!hasAdminAccess()) {
+        setError('You do not have permission to view this page.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/registrations');
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to load registration requests');
+        }
+
+        setRequests(data.requests || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
+  }, [user, router]);
+
+  // Handle approve/reject actions
+  const handleAction = async (id: string, action: 'approve' | 'reject') => {
     if (!user) return;
 
     setActionLoadingId(id);
@@ -107,55 +98,42 @@ useEffect(() => {
         body: JSON.stringify({
           id,
           action,
-          adminId: user.id, 
+          adminId: user.id,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to update request');
+        throw new Error(data.error || `Failed to ${action} request`);
       }
 
-      // Update local list
+      // Update the specific request in state
       setRequests(prev =>
-        prev.map(r => (r.id === id ? (data.request as RegistrationRequest) : r)),
+        prev.map(r => (r.id === id ? (data.request as RegistrationRequest) : r))
       );
     } catch (err) {
-      console.error(err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to update request status',
-      );
+      setError(err instanceof Error ? err.message : 'Failed to update request');
     } finally {
       setActionLoadingId(null);
     }
   };
-// Add this debug code - remove after fixing
-useEffect(() => {
-  console.log('🔍 ADMIN PAGE DEBUG:');
-  console.log('User object:', user);
-  console.log('User role:', user?.role);
-  console.log('User permissions:', user?.permissions);
-  console.log('User isAdmin:', user?.isAdmin);
-  console.log('Full user object:', JSON.stringify(user, null, 2));
-}, [user]);
 
-
-  /* ---------- RENDER ---------- */
-
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="text-slate-200 text-sm">Loading registrations…</div>
+        <div className="text-slate-300">Loading registration requests…</div>
       </div>
     );
   }
 
+  // Error / unauthorized state
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
         <div className="max-w-md w-full bg-red-500/10 border border-red-500/40 text-red-100 rounded-2xl p-6 flex gap-3">
-          <ShieldAlert className="w-6 h-6 mt-1" />
+          <ShieldAlert className="w-6 h-6 mt-1 flex-shrink-0" />
           <div>
             <h2 className="font-semibold mb-1">Authorization issue</h2>
             <p className="text-sm mb-3">{error}</p>
@@ -171,29 +149,25 @@ useEffect(() => {
     );
   }
 
+  // Main UI
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 px-4 py-10">
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* Header */}
-        <header className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-50 flex items-center gap-2">
-              Client Registration Requests
-            </h1>
-            <p className="text-sm text-slate-400 mt-1">
-              Review and approve new organisations requesting access to the
-              Apex Growth Portal.
-            </p>
-          </div>
+        <header>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-50 flex items-center gap-3">
+            Client Registration Requests
+          </h1>
+          <p className="text-sm text-slate-400 mt-2">
+            Review and manage organizations requesting access to the Apex Growth Portal.
+          </p>
         </header>
 
-        {/* List */}
         {requests.length === 0 ? (
-          <div className="bg-slate-900/70 border border-slate-700/70 rounded-2xl p-8 text-center text-slate-300">
-            <p>No registration requests found.</p>
+          <div className="bg-slate-900/70 border border-slate-700/70 rounded-2xl p-12 text-center">
+            <p className="text-slate-400">No pending registration requests.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {requests.map(req => {
               const status = (req.status || 'pending') as RegistrationStatus;
               const isPending = status === 'pending';
@@ -201,52 +175,63 @@ useEffect(() => {
               return (
                 <div
                   key={req.id}
-                  className="bg-slate-900/70 border border-slate-700/70 rounded-2xl p-5 sm:p-6 flex flex-col gap-4"
+                  className="bg-slate-900/70 border border-slate-700/70 rounded-2xl p-6 backdrop-blur-sm"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-400/40 flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-emerald-300" />
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-400/40 flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-6 h-6 text-emerald-300" />
                       </div>
                       <div>
-                        <div className="font-semibold text-slate-50">
+                        <h3 className="font-semibold text-slate-50 text-lg">
                           {req.company_name}
-                        </div>
-                        <div className="text-xs text-slate-400">
+                        </h3>
+                        <p className="text-sm text-slate-400">
                           Requested by {req.full_name}
-                        </div>
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
+                          {req.requested_at
+                            ? new Date(req.requested_at).toLocaleString()
+                            : 'Date unknown'}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-400">
-                        {req.requested_at
-                          ? new Date(req.requested_at).toLocaleString()
-                          : '—'}
-                      </span>
+                    <div className="flex items-center gap-2 text-sm">
+                      {status === 'approved' && (
+                        <>
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                          <span className="text-emerald-300 font-medium">Approved</span>
+                        </>
+                      )}
+                      {status === 'rejected' && (
+                        <>
+                          <XCircle className="w-5 h-5 text-rose-400" />
+                          <span className="text-rose-300 font-medium">Rejected</span>
+                        </>
+                      )}
+                      {isPending && (
+                        <>
+                          <Clock className="w-5 h-5 text-amber-400" />
+                          <span className="text-amber-300 font-medium">Pending</span>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  {/* Contact + message */}
-                  <div className="grid md:grid-cols-2 gap-4 text-sm text-slate-200">
-                    <div className="space-y-1">
+                  <div className="mt-5 grid md:grid-cols-2 gap-5 text-sm">
+                    <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 text-slate-400" />
-                        <a
-                          href={`mailto:${req.contact_email}`}
-                          className="hover:underline"
-                        >
+                        <a href={`mailto:${req.contact_email}`} className="text-slate-200 hover:underline">
                           {req.contact_email}
                         </a>
                       </div>
                       {req.phone && (
                         <div className="flex items-center gap-2">
                           <Phone className="w-4 h-4 text-slate-400" />
-                          <a
-                            href={`tel:${req.phone}`}
-                            className="hover:underline"
-                          >
+                          <a href={`tel:${req.phone}`} className="text-slate-200 hover:underline">
                             {req.phone}
                           </a>
                         </div>
@@ -254,54 +239,30 @@ useEffect(() => {
                     </div>
 
                     {req.message && (
-                      <div className="text-xs sm:text-sm text-slate-300 bg-slate-800/60 border border-slate-700/70 rounded-xl p-3">
-                        {req.message}
+                      <div className="text-slate-300 text-sm bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
+                        <p className="italic">"{req.message}"</p>
                       </div>
                     )}
                   </div>
 
-                  {/* Status + actions */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-center gap-2 text-xs">
-                      {status === 'approved' && (
-                        <>
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          <span className="text-emerald-300">Approved</span>
-                        </>
-                      )}
-                      {status === 'rejected' && (
-                        <>
-                          <XCircle className="w-4 h-4 text-rose-400" />
-                          <span className="text-rose-300">Rejected</span>
-                        </>
-                      )}
-                      {status === 'pending' && (
-                        <>
-                          <Clock className="w-4 h-4 text-amber-300" />
-                          <span className="text-amber-200">Pending review</span>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 justify-end">
+                  {isPending && (
+                    <div className="mt-5 flex justify-end gap-3">
                       <button
-                        type="button"
-                        disabled={!isPending || actionLoadingId === req.id}
                         onClick={() => handleAction(req.id, 'reject')}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-rose-500/60 text-rose-100 bg-rose-500/5 hover:bg-rose-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                        disabled={actionLoadingId === req.id}
+                        className="px-4 py-2 text-sm font-medium rounded-lg border border-rose-500/60 text-rose-100 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition"
                       >
-                        {actionLoadingId === req.id ? 'Updating…' : 'Reject'}
+                        {actionLoadingId === req.id ? 'Processing…' : 'Reject'}
                       </button>
                       <button
-                        type="button"
-                        disabled={!isPending || actionLoadingId === req.id}
                         onClick={() => handleAction(req.id, 'approve')}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-500/70 text-emerald-50 bg-emerald-500/10 hover:bg-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed"
+                        disabled={actionLoadingId === req.id}
+                        className="px-4 py-2 text-sm font-medium rounded-lg border border-emerald-500/70 text-emerald-50 bg-emerald-500/10 hover:bg-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition"
                       >
-                        {actionLoadingId === req.id ? 'Updating…' : 'Approve'}
+                        {actionLoadingId === req.id ? 'Processing…' : 'Approve'}
                       </button>
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
