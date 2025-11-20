@@ -39,56 +39,49 @@ export default function AdminRegistrationsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Load requests + basic admin guard
-    // Load requests + basic admin guard
-  useEffect(() => {
-    const init = async () => {
-      // While auth state is still loading on the client, don't do anything.
-      // If your useAuthStore exposes a `hydrated` or `initialized` flag, you can use it here.
-      // For now we just wait for `user` to settle at either a value or null.
+ useEffect(() => {
+  const init = async () => {
+    // Give auth store time to initialize
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    if (!user) {
+      router.replace('/login?next=/admin/registrations');
+      return;
+    }
 
-      // Not logged in → send to login (with redirect back here)
-      if (user === null) {
-        router.replace('/login?next=/admin/registrations');
-        return;
-      }
+    // More flexible admin check
+    const isAdmin = user?.role === 'admin' || 
+                   user?.permissions?.includes('admin') ||
+                   user?.isAdmin === true;
 
-      // Still no user object (undefined) – don't redirect yet
-      if (typeof user === 'undefined') {
-        return;
-      }
+    console.log('Admin access check:', { 
+      hasUser: !!user, 
+      userRole: user?.role, 
+      userPermissions: user?.permissions,
+      isAdmin 
+    });
 
-      const isAdmin =
-        user.role === 'admin' || user.permissions?.includes('admin');
+    if (!isAdmin) {
+      setError('You do not have permission to view this page.');
+      setLoading(false);
+      return;
+    }
 
-      if (!isAdmin) {
-        setError('You do not have permission to view this page.');
-        setLoading(false);
-        return;
-      }
+    // Load requests if user is admin
+    try {
+      const res = await fetch('/api/admin/registrations');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load requests');
+      setRequests(data.requests || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load requests');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      try {
-        const res = await fetch('/api/admin/registrations');
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || 'Failed to load registration requests');
-        }
-
-        setRequests(data.requests || []);
-      } catch (err) {
-        console.error(err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Failed to load registration requests',
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    init();
-  }, [user, router]);
+  init();
+}, [user, router]);
 
 
   const handleAction = async (
