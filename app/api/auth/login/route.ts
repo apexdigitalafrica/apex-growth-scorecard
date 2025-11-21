@@ -1,9 +1,7 @@
-// app/api/auth/login/route.ts
-// app/api/auth/login/route.ts
+// app/api/auth/login/route.ts - FIXED VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Move the check inside the function
 export async function POST(request: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -54,12 +52,44 @@ export async function POST(request: NextRequest) {
     const authUser = data.user;
     console.log('✅ Login success for:', email, 'user id:', authUser.id);
 
-    // 2️⃣ Try to load client user + client data
+    // 2️⃣ 🔥 CRITICAL FIX: Check if user is admin in admin_users table
+    console.log('🔍 Checking admin access for:', email);
+    const { data: adminData, error: adminError } = await supabase
+      .from('admin_users')
+      .select('role, permissions, full_name')
+      .eq('email', email)
+      .single();
+
+    console.log('🎯 Admin check result:', adminData);
+
+    // 3️⃣ If user is admin, return admin role immediately
+    if (adminData && !adminError) {
+      console.log('🚀 User is ADMIN - granting admin access');
+      
+      const userPayload = {
+        id: authUser.id,
+        email: authUser.email,
+        role: 'admin', // Force admin role
+        permissions: adminData.permissions || ['admin'],
+        full_name: adminData.full_name || email,
+        user_metadata: authUser.user_metadata,
+      };
+
+      console.log('🎯 Final user payload (ADMIN):', userPayload);
+      
+      return NextResponse.json({
+        success: true,
+        user: userPayload,
+        session: data.session,
+      });
+    }
+
+    // 4️⃣ If not admin, check client users (your existing logic)
+    console.log('ℹ️ User is not admin, checking client access...');
     let clientUser: any = null;
     let client: any = null;
 
     try {
-      // Prefer auth_user_id if your client_users table has that column
       let clientUserQuery = supabase
         .from('client_users')
         .select('id, client_id, email, full_name, role')
@@ -68,7 +98,6 @@ export async function POST(request: NextRequest) {
 
       let { data: cuData, error: cuError } = await clientUserQuery;
 
-      // Fallback: use email if auth_user_id is not set / not found
       if (cuError || !cuData) {
         console.warn('⚠ No client_users row by auth_user_id, trying by email:', cuError?.message);
         const fallback = await supabase
@@ -83,7 +112,6 @@ export async function POST(request: NextRequest) {
       if (!cuError && cuData) {
         clientUser = cuData;
 
-        // Now load the client row
         if (clientUser.client_id) {
           const { data: clientData, error: clientError } = await supabase
             .from('clients')
@@ -93,8 +121,6 @@ export async function POST(request: NextRequest) {
 
           if (!clientError && clientData) {
             client = clientData;
-          } else if (clientError) {
-            console.error('❌ Error loading client row:', clientError.message);
           }
         }
       }
@@ -102,42 +128,33 @@ export async function POST(request: NextRequest) {
       console.error('❌ Error looking up client user/client:', lookupErr);
     }
 
-    // 3️⃣ Build a safe client object (so .primary_color is never undefined)
+    // 5️⃣ Build client user payload
     const safeClient = {
       id: client?.id ?? clientUser?.client_id ?? null,
       company_name: client?.company_name ?? null,
-      primary_color: client?.primary_color ?? '#0F172A', // default dark slate
+      primary_color: client?.primary_color ?? '#0F172A',
       logo_url: client?.logo_url ?? null,
       subdomain: client?.subdomain ?? null,
     };
 
-    // 4️⃣ Build a nicer user payload for the frontend
     const userPayload = {
       id: authUser.id,
       email: authUser.email,
-      role:
-        (authUser.user_metadata as any)?.role ||
-        clientUser?.role ||
-        'user',
-      full_name:
-        (authUser.user_metadata as any)?.full_name ||
-        clientUser?.full_name ||
-        null,
-      permissions:
-        ((authUser.user_metadata as any)?.permissions as string[]) || [],
+      role: clientUser?.role || 'user',
+      full_name: clientUser?.full_name || null,
+      permissions: [],
       client: safeClient,
-      // Keep raw metadata if you ever need it
       meta: authUser.user_metadata,
     };
 
-    return NextResponse.json(
-      {
-        success: true,
-        user: userPayload,
-        session: data.session,
-      },
-      { status: 200 }
-    );
+    console.log('🎯 Final user payload (CLIENT):', userPayload);
+
+    return NextResponse.json({
+      success: true,
+      user: userPayload,
+      session: data.session,
+    });
+
   } catch (err) {
     console.error('🚨 /api/auth/login unexpected error:', err);
     return NextResponse.json(
