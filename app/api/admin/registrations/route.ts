@@ -4,75 +4,127 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
   try {
-    const supabase = await createClient(); // Add await here!
+    const supabase = await createClient();
+    
+    // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-
+    
     if (userError) {
-      console.error('Auth error:', userError);
-      return NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
+      console.error('❌ Auth error:', userError);
+      return NextResponse.json({ error: 'Authentication failed', details: userError.message }, { status: 401 });
     }
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('❌ No user found in session');
+      return NextResponse.json({ error: 'Unauthorized - no session' }, { status: 401 });
     }
 
-    // Check admin permissions by email
+    console.log('✅ User authenticated:', user.email);
+
+    // Check admin permissions
     const { data: adminData, error: adminError } = await supabase
       .from('admin_users')
-      .select('permissions')
+      .select('permissions, role')
       .eq('email', user.email)
       .single();
 
     if (adminError) {
-      console.error('Admin check error:', adminError);
-      return NextResponse.json({ error: 'Admin check failed' }, { status: 500 });
+      console.error('❌ Admin check error:', adminError);
+      
+      // If the error is that the row doesn't exist, it's a permission issue
+      if (adminError.code === 'PGRST116') {
+        return NextResponse.json({ 
+          error: 'Forbidden - not an admin user',
+          details: 'Your account is not registered as an admin'
+        }, { status: 403 });
+      }
+      
+      return NextResponse.json({ 
+        error: 'Admin verification failed',
+        details: adminError.message 
+      }, { status: 500 });
     }
 
-    // Handle JSON string permissions
+    if (!adminData) {
+      console.error('❌ No admin data found for:', user.email);
+      return NextResponse.json({ 
+        error: 'Forbidden - not an admin user' 
+      }, { status: 403 });
+    }
+
+    console.log('✅ Admin data found:', adminData);
+
+    // Parse permissions
     let permissions: string[] = [];
-    if (typeof adminData?.permissions === 'string') {
+    if (typeof adminData.permissions === 'string') {
       try {
         permissions = JSON.parse(adminData.permissions);
       } catch (e) {
-        console.error('Failed to parse permissions:', e);
+        console.error('❌ Failed to parse permissions:', e);
       }
-    } else if (Array.isArray(adminData?.permissions)) {
+    } else if (Array.isArray(adminData.permissions)) {
       permissions = adminData.permissions;
     }
 
+    console.log('✅ Parsed permissions:', permissions);
+
+    // Check if user has admin permission
     if (!permissions.includes('admin')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      console.error('❌ User lacks admin permission:', user.email);
+      return NextResponse.json({ 
+        error: 'Forbidden - insufficient permissions',
+        details: `User has permissions: ${permissions.join(', ')} but needs: admin`
+      }, { status: 403 });
     }
 
-    // Fetch from the correct table
+    console.log('✅ Admin permission verified, fetching registrations...');
+
+    // Fetch registration requests
     const { data: requests, error: requestsError } = await supabase
-      .from('client_registration_requests') // Make sure this table exists!
+      .from('client_registration_requests')
       .select('*')
       .order('requested_at', { ascending: false });
 
     if (requestsError) {
-      console.error('Database error:', requestsError);
-      return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 });
+      console.error('❌ Database error fetching requests:', requestsError);
+      return NextResponse.json({ 
+        error: 'Failed to fetch requests',
+        details: requestsError.message 
+      }, { status: 500 });
     }
 
-    return NextResponse.json({ requests: requests || [] });
+    console.log('✅ Successfully fetched', requests?.length || 0, 'registration requests');
 
-  } catch (error) {
-    console.error('Unexpected error in admin API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ requests: requests || [] });
+    
+  } catch (error: any) {
+    console.error('❌ Unexpected error in admin API:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error?.message || String(error)
+    }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = await createClient(); // Add await here!
+    const supabase = await createClient();
+    
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-
+    
     if (userError || !user) {
+      console.error('❌ Auth error in PATCH:', userError);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id, action } = await req.json();
+    
+    if (!id || !action) {
+      return NextResponse.json({ 
+        error: 'Missing required fields: id and action' 
+      }, { status: 400 });
+    }
+
     const status = action === 'approve' ? 'approved' : 'rejected';
 
     const { data, error } = await supabase
@@ -87,14 +139,22 @@ export async function PATCH(req: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Update error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('❌ Update error:', error);
+      return NextResponse.json({ 
+        error: 'Failed to update request',
+        details: error.message 
+      }, { status: 500 });
     }
 
-    return NextResponse.json({ request: data });
+    console.log('✅ Successfully updated registration request:', id);
 
-  } catch (error) {
-    console.error('Unexpected error in PATCH:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ request: data });
+    
+  } catch (error: any) {
+    console.error('❌ Unexpected error in PATCH:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error?.message || String(error)
+    }, { status: 500 });
   }
 }
