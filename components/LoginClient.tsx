@@ -28,8 +28,9 @@ export default function LoginClient() {
     const next = searchParams.get('next');
     if (next) setNextPath(next);
   }, [searchParams]);
-
- const handleSubmit = async (e: React.FormEvent) => {
+  
+  
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setLoading(true);
   setError('');
@@ -47,16 +48,14 @@ export default function LoginClient() {
       throw new Error(data.error || 'Login failed');
     }
 
-    // Optional: pull role from Supabase metadata if you’re setting it there
     const metaRole =
       data.user?.user_metadata?.role ??
       data.user?.app_metadata?.role ??
       null;
 
-    // Effective role: prefer metadata, fall back to selected loginType
     const effectiveRole = metaRole || loginType;
 
-    // If your store benefits from knowing the role, you can inject it:
+    // Store the user in your auth store
     login({ ...data.user, role: effectiveRole });
 
     const isAdmin = effectiveRole === 'admin';
@@ -64,14 +63,11 @@ export default function LoginClient() {
     let redirectTo: string;
 
     if (isAdmin) {
-      // If ?next=/admin/... and they’re truly admin → honour it
-      if (nextPath && nextPath.startsWith('/admin')) {
-        redirectTo = nextPath;
-      } else {
-        redirectTo = '/admin/registrations'; // or '/admin/dashboard'
-      }
+      // ✅ ALWAYS redirect admin to /dashboard first
+      // The dashboard card will then take them to /admin/registrations
+      redirectTo = '/dashboard';
     } else {
-      // Client: allow ?next= as long as it’s not an admin URL
+      // Client: allow ?next= as long as it's not an admin URL
       if (nextPath && !nextPath.startsWith('/admin')) {
         redirectTo = nextPath;
       } else {
@@ -79,7 +75,8 @@ export default function LoginClient() {
       }
     }
 
-    router.replace(redirectTo);
+    // ✅ Use router.push instead of router.replace for better cookie handling
+    router.push(redirectTo);
   } catch (err: any) {
     console.error('Login error:', err);
     setError(err.message || 'Login failed');
@@ -87,6 +84,7 @@ export default function LoginClient() {
     setLoading(false);
   }
 };
+
 
 
   return (
