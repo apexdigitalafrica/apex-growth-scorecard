@@ -1,18 +1,24 @@
 // app/api/auth/login/route.ts
+// app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase env vars in /api/auth/login');
-}
-
+// Move the check inside the function
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, loginType } = await request.json();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+    // Check env vars at runtime, not build time
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('❌ Missing Supabase env vars in /api/auth/login');
+      return NextResponse.json(
+        { error: 'Service configuration error' },
+        { status: 500 }
+      );
+    }
+
+    const { email, password, loginType } = await request.json();
     console.log('🔐 Login attempt for:', email, 'type:', loginType);
 
     if (!email || !password) {
