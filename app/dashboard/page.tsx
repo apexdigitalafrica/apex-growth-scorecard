@@ -96,6 +96,8 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<SubmissionRecord | null>(null);
+  
+  
 
   // Data Fetching
   const fetchDashboardData = useCallback(async (showRefreshing = false) => {

@@ -1,22 +1,31 @@
 // app/api/admin/registrations/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // Get cookies to pass to Supabase client
+    const cookieStore = await cookies();
     const supabase = await createClient();
     
-    // Get the current user
+    // Get the current user from the session
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError) {
       console.error('❌ Auth error:', userError);
-      return NextResponse.json({ error: 'Authentication failed', details: userError.message }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'Authentication failed', 
+        details: userError.message 
+      }, { status: 401 });
     }
 
     if (!user) {
       console.error('❌ No user found in session');
-      return NextResponse.json({ error: 'Unauthorized - no session' }, { status: 401 });
+      return NextResponse.json({ 
+        error: 'Unauthorized - no session',
+        details: 'Please log in to access this resource'
+      }, { status: 401 });
     }
 
     console.log('✅ User authenticated:', user.email);
@@ -31,7 +40,6 @@ export async function GET() {
     if (adminError) {
       console.error('❌ Admin check error:', adminError);
       
-      // If the error is that the row doesn't exist, it's a permission issue
       if (adminError.code === 'PGRST116') {
         return NextResponse.json({ 
           error: 'Forbidden - not an admin user',

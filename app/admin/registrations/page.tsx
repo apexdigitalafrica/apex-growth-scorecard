@@ -369,14 +369,21 @@ export default function AdminRegistrationsPage() {
     setMounted(true);
   }, []);
 
-  const hasAdminAccess = () => {
-    if (!user) return false;
-    return (
-      (user as any).role === 'admin' ||
-      (Array.isArray((user as any).permissions) &&
-        (user as any).permissions.includes('admin'))
-    );
-  };
+ const hasAdminAccess = () => {
+  if (!user) return false;
+
+  const u = user as any;
+  const role = (u.role || '').toString().toLowerCase();
+  const perms = u.permissions || u.permissions || [];
+
+  return (
+    role.includes('admin') ||
+    role.includes('root') ||
+    u.isAdmin === true ||
+    u.admin === true ||
+    (Array.isArray(perms) && perms.some((p: string) => p.toLowerCase().includes('admin')))
+  );
+};
 
   useEffect(() => {
     const init = async () => {
