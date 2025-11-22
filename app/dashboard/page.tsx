@@ -1,14 +1,15 @@
 'use client';
 export const dynamic = 'force-dynamic';
+
 import { UserPlus, Clock } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { 
-  TrendingUp, 
+import {
+  TrendingUp,
   TrendingDown,
   ArrowRight,
-  Users, 
-  Target, 
+  Users,
+  Target,
   Download,
   RefreshCw,
   Search,
@@ -26,7 +27,7 @@ import {
   FileSpreadsheet,
   Eye,
   X,
-  Lock, 
+  Lock,
   Shield,
   Award
 } from 'lucide-react';
@@ -80,12 +81,8 @@ type LeadFilter = 'all' | 'hot' | 'warm' | 'cold';
 export default function Dashboard() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
-  const [pendingCount, setPendingCount] = useState(0);
 
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
-  };
+  const [pendingCount, setPendingCount] = useState(0);
 
   // State Management
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -96,51 +93,82 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<SubmissionRecord | null>(null);
-  
-  
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
+  // Guard
+  useEffect(() => {
+    if (!user) {
+      router.push('/login');
+    }
+  }, [user, router]);
+
+  const hasAdminAccess = useMemo(() => {
+    if (!user) return false;
+    const u: any = user;
+    return u.role === 'admin' || (Array.isArray(u.permissions) && u.permissions.includes('admin'));
+  }, [user]);
 
   // Data Fetching
-  const fetchDashboardData = useCallback(async (showRefreshing = false) => {
-    try {
-      if (showRefreshing) setRefreshing(true);
-      
-      const response = await fetch(`/api/dashboard-stats?range=${timeRange}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard data');
+  const fetchDashboardData = useCallback(
+    async (showRefreshing = false) => {
+      try {
+        if (showRefreshing) setRefreshing(true);
+
+        const response = await fetch(`/api/dashboard-stats?range=${timeRange}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard data');
+        }
+
+        const data = await response.json();
+        setStats(data);
+        setError(null);
+      } catch (error) {
+        console.error('Failed to fetch dashboard data:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-      
-      const data = await response.json();
-      setStats(data);
-      setError(null);
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [timeRange]);
+    },
+    [timeRange]
+  );
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Fetch pending registrations count
-  useEffect(() => {
-    async function fetchPending() {
-      try {
-        const res = await fetch('/api/admin/registrations?status=pending');
-        const data = await res.json();
-        if (data.requests) {
-          setPendingCount(data.requests.length);
-        }
-      } catch (error) {
-        console.error('Failed to fetch pending count:', error);
+  // Fetch pending registrations count (admins only + header)
+ useEffect(() => {
+  if (!user || !hasAdminAccess) return;
+
+  async function fetchPending() {
+    try {
+      const res = await fetch('/api/admin/registrations?status=pending', {
+        headers: {
+          Authorization: `Bearer ${(user as any).access_token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.requests) {
+        setPendingCount(data.requests.length);
+      } else {
+        console.error('Admin fetch error:', data.error);
       }
+    } catch (error) {
+      console.error('Failed to fetch pending count:', error);
     }
-    fetchPending();
-  }, []);
+  }
+
+  fetchPending();
+}, [user, hasAdminAccess]);
+
 
   // Memoized Filtered Data
   const filteredSubmissions = useMemo(() => {
@@ -307,7 +335,6 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* Quick Access Cards */}
            {/* Quick Access Cards */}
       <div className="relative z-10 max-w-[1600px] mx-auto p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -654,7 +681,10 @@ export default function Dashboard() {
                   <div className="text-xs text-blue-200 mt-1">Active Pipeline</div>
                 </div>
                 <div className="bg-white/5 rounded-xl p-4 border border-white/10 text-center">
-                  <div className="text-2xl font-bold text-white">{Math.round((stats.hotLeads / stats.totalSubmissions) * 100)}%</div>
+                  <div className="text-2xl font-bold text-white">{stats.totalSubmissions > 0
+  ? Math.round((stats.hotLeads / stats.totalSubmissions) * 100)
+  : 0}%
+</div>
                   <div className="text-xs text-blue-200 mt-1">Quality Rate</div>
                 </div>
                 <div className="bg-white/5 rounded-xl p-4 border border-white/10 text-center">
@@ -1002,12 +1032,12 @@ export default function Dashboard() {
                   Send Email
                 </a>
                 <a
-                  href={`tel:${selectedLead.email}`}
-                  className="flex items-center justify-center gap-2 bg-green-500/20 hover:bg-green-500/30 text-green-300 px-6 py-3 rounded-xl transition-all border border-green-500/30 font-semibold"
-                >
-                  <Phone className="w-5 h-5" />
-                  Call
-                </a>
+  href={`mailto:${selectedLead.email}`}
+  className="flex items-center justify-center gap-2 bg-green-500/20 hover:bg-green-500/30 text-green-300 px-6 py-3 rounded-xl transition-all border border-green-500/30 font-semibold"
+>
+  <Phone className="w-5 h-5" />
+  Call (email fallback)
+</a>
                 <a
                   href="https://bit.ly/africa-website"
                   target="_blank"

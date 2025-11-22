@@ -190,12 +190,7 @@ export default function ClientDashboard() {
                     background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` 
                   }}
                 >
-<div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center font-bold text-white text-sm">
-  {clientUser?.client?.company_name ? 
-    clientUser.client.company_name.substring(0, 2).toUpperCase() : 
-    'CO'
-  }
-</div>
+                  {clientUser.client.company_name.substring(0, 2).toUpperCase()}
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className={`absolute -inset-1 bg-gradient-to-r ${performanceBadge.color} rounded-2xl blur opacity-30 group-hover:opacity-60 transition-opacity`}></div>
                 </div>
