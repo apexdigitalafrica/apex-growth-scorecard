@@ -1,67 +1,43 @@
-// app/whatsapp-funnel/page.tsx
-import WhatsAppFunnelScorecard from '@/components/WhatsAppFunnelScorecard';
-import type { WhatsAppFunnelSnapshot } from '@/lib/whatsappTypes';
+import WhatsAppFunnelScorecard from "@/components/WhatsAppFunnelScorecard";
+import { getWhatsAppSnapshot } from "@/lib/whatsapp/getSnapshot";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-const mockWhatsAppSnapshot: WhatsAppFunnelSnapshot = {
-  id: 'wa-demo',
-  businessName: 'FinConnect SaaS – Nigeria',
-  periodLabel: 'Last 7 Days',
-  currency: '₦',
-  estimatedRevenue: 9500000,
-  stages: [
-    {
-      id: 'new_inbound',
-      label: 'New Inbound Chats',
-      input: 1200,
-      output: 900,
-      avgResponseMinutes: 3,
-      targetResponseMinutes: 5,
-      targetConversion: 0.7,
-    },
-    {
-      id: 'first_response',
-      label: 'First Response → Active Conversation',
-      input: 900,
-      output: 650,
-      avgResponseMinutes: 7,
-      targetResponseMinutes: 5,
-      targetConversion: 0.75,
-    },
-    {
-      id: 'qualified',
-      label: 'Qualified Lead',
-      input: 650,
-      output: 260,
-      avgResponseMinutes: 10,
-      targetResponseMinutes: 8,
-      targetConversion: 0.4,
-    },
-    {
-      id: 'booking',
-      label: 'Call / Demo Booked',
-      input: 260,
-      output: 110,
-      avgResponseMinutes: 12,
-      targetResponseMinutes: 10,
-      targetConversion: 0.45,
-    },
-    {
-      id: 'closed_won',
-      label: 'Closed Won',
-      input: 110,
-      output: 38,
-      avgResponseMinutes: 15,
-      targetResponseMinutes: 15,
-      targetConversion: 0.35,
-    },
-  ],
-};
+export default async function WhatsAppFunnelPage() {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-export default function WhatsAppFunnelPage() {
+  if (!user) redirect("/login?next=/whatsapp-funnel");
+
+  // pull client_id from your client_users table
+  const { data: clientUser } = await supabase
+    .from("client_users")
+    .select("client_id")
+    .eq("auth_user_id", user.id)
+    .single();
+
+  if (!clientUser?.client_id) {
+    return (
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+        No client linked.
+      </main>
+    );
+  }
+
+  const snapshot = await getWhatsAppSnapshot(clientUser.client_id);
+
+  if (!snapshot) {
+    return (
+      <main className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+        No WhatsApp data in last 7 days yet.
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-10 sm:px-8">
       <div className="mx-auto max-w-6xl space-y-8">
-        <WhatsAppFunnelScorecard snapshot={mockWhatsAppSnapshot} />
+        <WhatsAppFunnelScorecard snapshot={snapshot} />
       </div>
     </main>
   );

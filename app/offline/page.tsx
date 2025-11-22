@@ -1,4 +1,6 @@
 // app/offline/page.tsx
+'use client';
+
 export default function OfflinePage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-6">
