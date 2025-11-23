@@ -4,6 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/session-client';
+import AIPremiumCard from '@/components/AIPremiumCard';
+
 import { 
   TrendingUp, 
   Users, 
@@ -346,6 +348,7 @@ export default function ClientDashboard() {
               icon={Clock}
               gradient="from-purple-500 to-pink-500"
             />
+			
           </div>
         </div>
 
@@ -440,8 +443,7 @@ export default function ClientDashboard() {
                   />
                 ))}
               </div>
-
-              <button className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group/btn shadow-lg shadow-purple-500/50 hover:shadow-pink-500/50 hover:scale-105">
+		   <button className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group/btn shadow-lg shadow-purple-500/50 hover:shadow-pink-500/50 hover:scale-105">
                 View AI Analysis
                 <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
               </button>
@@ -452,50 +454,74 @@ export default function ClientDashboard() {
         {/* Elite Action Cards & Activity */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Premium Tools */}
-          <div className="xl:col-span-2">
-            <h3 className="text-3xl font-black bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-transparent mb-6 flex items-center gap-3">
-              <Rocket className="w-7 h-7 text-cyan-400" />
-              Growth Arsenal
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <UltraActionCard
-                title="Digital Scorecard"
-                description="Deep-dive analytics with real-time intelligence and predictive insights"
-                icon="📊"
-                gradient="from-blue-500 via-cyan-500 to-blue-600"
-                onClick={() => router.push('/client-portal/scorecard')}
-                status="LIVE"
-                badge="Popular"
-              />
-              <UltraActionCard
-                title="Funnel Intelligence"
-                description="AI-powered funnel optimization with conversion acceleration strategies"
-                icon="🔍"
-                gradient="from-purple-500 via-pink-500 to-purple-600"
-                onClick={() => router.push('/client-portal/funnel-analysis')}
-                status="NEW"
-                badge="AI-Powered"
-              />
-              <UltraActionCard
-                title="Executive Reports"
-                description="White-label PDF reports with executive summaries and action plans" 
-                icon="📄"
-                gradient="from-emerald-500 via-green-500 to-emerald-600"
-                onClick={() => router.push('/client-portal/reports')}
-                status="UPDATED"
-                badge="Premium"
-              />
-              <UltraActionCard
-                title="Growth Strategy"
-                description="Personalized roadmap with implementation timelines and ROI projections"
-                icon="🚀"
-                gradient="from-orange-500 via-red-500 to-orange-600"
-                onClick={() => router.push('/client-portal/recommendations')}
-                badge="Strategic"
-              />
-            </div>
-          </div>
+<div className="xl:col-span-2">
+  <h3 className="text-3xl font-black bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-transparent mb-6 flex items-center gap-3">
+    <Rocket className="w-7 h-7 text-cyan-400" />
+    Growth Arsenal
+  </h3>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <UltraActionCard
+      title="Digital Scorecard"
+      description="Deep-dive analytics with real-time intelligence and predictive insights"
+      icon="📊"
+      gradient="from-blue-500 via-cyan-500 to-blue-600"
+      onClick={() => router.push('/client-portal/scorecard')}
+      status="LIVE"
+      badge="Popular"
+    />
+    
+    {/* 👇 ADD THESE TWO NEW CARDS */}
+    <UltraActionCard
+      title="WhatsApp Funnel"
+      description="AI-powered conversion tracking with real-time WhatsApp analytics"
+      icon="📈"
+      gradient="from-green-500 via-emerald-500 to-green-600"
+      onClick={() => router.push('/whatsapp-funnel')}
+      status="NEW"
+      badge="AI-Powered"
+    />
+    <UltraActionCard
+      title="Message Intelligence"
+      description="Complete conversation history with sentiment analysis and insights"
+      icon="💬"
+      gradient="from-purple-500 via-pink-500 to-purple-600"
+      onClick={() => router.push('/whatsapp-events')}
+      status="LIVE"
+      badge="Real-time"
+    />
+    
+    {/* Your existing cards */}
+    <UltraActionCard
+      title="Funnel Intelligence"
+      description="AI-powered funnel optimization with conversion acceleration strategies"
+      icon="🔍"
+      gradient="from-purple-500 via-pink-500 to-purple-600"
+      onClick={() => router.push('/client-portal/funnel-analysis')}
+      status="NEW"
+      badge="AI-Powered"
+    />
+    <UltraActionCard
+      title="Executive Reports"
+      description="White-label PDF reports with executive summaries and action plans" 
+      icon="📄"
+      gradient="from-emerald-500 via-green-500 to-emerald-600"
+      onClick={() => router.push('/client-portal/reports')}
+      status="UPDATED"
+      badge="Premium"
+    />
+	
+    <UltraActionCard
+      title="Growth Strategy"
+      description="Personalized roadmap with implementation timelines and ROI projections"
+      icon="🚀"
+      gradient="from-orange-500 via-red-500 to-orange-600"
+      onClick={() => router.push('/client-portal/recommendations')}
+      badge="Strategic"
+    />
+  </div>
+</div>
+
 
           {/* Premium Activity Feed */}
           <div className="relative group">
@@ -522,6 +548,7 @@ export default function ClientDashboard() {
                     priority={activity.priority}
                     index={index}
                   />
+				  
                 ))}
               </div>
 

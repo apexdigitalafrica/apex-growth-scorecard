@@ -1,5 +1,3 @@
-// public/sw.js
-
 const VERSION = "v2";
 const CACHE_NAME = `apex-scorecard-${VERSION}`;
 const RUNTIME_CACHE = `apex-runtime-${VERSION}`;
@@ -20,17 +18,15 @@ const APP_SHELL = [
   "/android-chrome-512x512.png",
 ];
 
-// Precache shell
+// Precache app shell
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+  );
   self.skipWaiting();
 });
 
-self.addEventListener("message", (event) => {
-  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
-});
-
-// Cleanup old caches
+// Claim clients on activate
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -44,8 +40,16 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Skip waiting message listener
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
 function isHTML(request) {
-  return request.mode === "navigate" || request.headers.get("accept")?.includes("text/html");
+  return (
+    request.mode === "navigate" ||
+    (request.headers.get("accept")?.includes("text/html") ?? false)
+  );
 }
 
 function isStaticAsset(url) {
@@ -58,60 +62,62 @@ function isStaticAsset(url) {
   );
 }
 
-// Fetch strategies:
-// 1) Navigations: network-first, offline fallback
-// 2) Static: stale-while-revalidate
-// 3) Everything else GET: network-first with cache fallback
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
 
-  // Never cache Supabase or APIs
+  // Do not cache APIs or Supabase requests
   if (url.pathname.startsWith("/api") || url.hostname.includes("supabase")) return;
 
-  // 1) HTML pages
+  // Strategy 1: HTML pages - Network first, offline fallback
   if (isHTML(request)) {
     event.respondWith(
-      fetch(request)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
-          return res;
-        })
-        .catch(async () => {
-          const cached = await caches.match(request);
-          return cached || caches.match("/offline");
-        })
+      (async () => {
+        try {
+          const response = await fetch(request);
+          const responseClone = response.clone();
+          const cache = await caches.open(RUNTIME_CACHE);
+          await cache.put(request, responseClone);
+          return response;
+        } catch {
+          const cachedResponse = await caches.match(request);
+          return cachedResponse || (await caches.match("/offline"));
+        }
+      })()
     );
     return;
   }
 
-  // 2) Static assets (stale-while-revalidate)
+  // Strategy 2: Static assets - Stale-while-revalidate
   if (isStaticAsset(url)) {
     event.respondWith(
-      caches.match(request).then((cached) => {
+      caches.match(request).then(async (cached) => {
         const networkFetch = fetch(request)
-          .then((res) => {
-            caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, res.clone()));
-            return res;
+          .then(async (response) => {
+            const cache = await caches.open(RUNTIME_CACHE);
+            await cache.put(request, response.clone());
+            return response;
           })
           .catch(() => cached);
-
         return cached || networkFetch;
       })
     );
     return;
   }
 
-  // 3) Default: network-first
+  // Strategy 3: Default network-first with cache fallback
   event.respondWith(
-    fetch(request)
-      .then((res) => {
-        caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, res.clone()));
-        return res;
-      })
-      .catch(() => caches.match(request))
+    (async () => {
+      try {
+        const response = await fetch(request);
+        const cache = await caches.open(RUNTIME_CACHE);
+        await cache.put(request, response.clone());
+        return response;
+      } catch {
+        return caches.match(request);
+      }
+    })()
   );
 });
